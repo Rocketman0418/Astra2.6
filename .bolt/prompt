@@ -1,5 +1,231 @@
-For all designs I ask you to make, have them be beautiful, not cookie cutter. Make webpages that are fully featured and worthy for production.
+Excellent point! Let me create a more **principles-based** Project Knowledge that guides development without locking us into specific implementations. This will be much more flexible and useful long-term.
 
-By default, this template supports JSX syntax with Tailwind CSS classes, React hooks, and Lucide React for icons. Do not install other packages for UI themes, icons, etc unless absolutely necessary or I request them.
+# Astra Intelligence - Bolt.new Project Knowledge
 
-Use icons from lucide-react for logos.
+## Core Mission & Purpose
+
+**Astra Intelligence** is the central AI platform for the RocketHub ecosystem, designed to synthesize data and provide intelligent insights for entrepreneurs. The platform enables both private AI conversations and team collaboration with AI assistance.
+
+**Core Value Proposition**: "AI Connected to ALL Your Data" - connecting private conversations, team collaboration, and cross-product insights.
+
+## Architectural Principles
+
+### Technology Philosophy
+- **Mobile-First PWA**: Every feature must work excellently on mobile before web
+- **Real-Time First**: All collaborative features use real-time synchronization
+- **AI-Enhanced**: Leverage AI to augment human intelligence, not replace it
+- **Secure by Design**: User data privacy and security are non-negotiable
+- **Progressive Enhancement**: Core functionality works without AI, enhanced with AI
+
+### Core Platform Capabilities
+
+**Dual Interaction Modes:**
+- **Private conversations** with AI for personal insights
+- **Team collaboration** with AI assistance for group work
+
+**AI Integration Pattern:**
+- External AI orchestration via webhooks (not direct API calls)
+- Separation between user messages and AI responses
+- Context preservation for meaningful AI interactions
+- Support for multiple AI providers through webhook architecture
+
+**Real-Time Collaboration:**
+- Message synchronization across all active users
+- @mention system for directing attention (both users and AI)
+- Rich media support (images, future: files, voice)
+- Conversation threading and context
+
+**Data Visualization:**
+- AI-generated visual insights from conversational data
+- Permission-based access (only requesters can generate/view)
+- Interactive HTML visualizations
+- Modal/full-screen viewing experience
+
+## Development Principles for Bolt.new
+
+### Design Philosophy
+
+**1. User Experience First**
+- Intuitive interactions requiring minimal explanation
+- Clear visual feedback for all async operations
+- Graceful error handling with actionable messages
+- Loading states for all operations > 300ms
+
+**2. Mobile-Optimized Design**
+- Touch targets minimum 44x44px
+- Thumb-friendly navigation zones
+- Responsive layouts that adapt intelligently
+- Performance optimization for mobile networks
+
+**3. Real-Time Considerations**
+- Optimistic UI updates where appropriate
+- Conflict resolution for concurrent edits
+- Clear indicators of sync status
+- Efficient data loading (pagination, infinite scroll)
+
+**4. Accessibility & Inclusion**
+- Semantic HTML structure
+- Keyboard navigation support
+- Screen reader compatibility
+- High contrast ratios for readability
+
+### Technical Patterns to Follow
+
+**State Management:**
+- Use React hooks for local state
+- Leverage Supabase Realtime for distributed state
+- Implement proper cleanup in useEffect hooks
+- Avoid prop drilling with context when appropriate
+
+**Data Flow:**
+- User action → Optimistic UI update → Database write → Confirmation
+- Real-time listener updates all connected clients
+- Handle race conditions in message ordering
+- Preserve scroll position during dynamic content loads
+
+**Security Patterns:**
+- Always use Supabase auth for user identity
+- Implement Row Level Security (RLS) policies
+- Never trust client-side data validation alone
+- Sanitize user inputs before display
+
+**Performance Patterns:**
+- Lazy load historical data (infinite scroll)
+- Debounce expensive operations (search, typing indicators)
+- Virtualize long lists when necessary
+- Optimize images before upload (client-side compression)
+
+### Integration Guidelines
+
+**AI Webhook Pattern:**
+When integrating with AI services:
+1. Send user context and message to webhook
+2. Include necessary metadata (mode, mentions, conversation history)
+3. Handle webhook timeout gracefully (show retry option)
+4. Store AI responses with attribution to original question
+5. Support async responses (webhook may take seconds)
+
+**Real-Time Subscription Pattern:**
+For Supabase Realtime:
+1. Subscribe on component mount with proper filters
+2. Transform incoming data to match UI expectations
+3. Prevent duplicate message rendering
+4. Clean up subscriptions on unmount
+5. Handle reconnection scenarios
+
+**File Upload Pattern:**
+For media sharing:
+1. Client-side validation (type, size)
+2. Upload to Supabase Storage with user-specific paths
+3. Generate and store public URLs
+4. Include metadata in message object
+5. Handle upload failures with clear feedback
+
+## Brand & Design System
+
+### Visual Identity
+- **Primary Gradient**: Orange → Green → Blue (RocketHub brand)
+- **Dark Theme**: Optimized for extended use and mobile OLED screens
+- **AI Identity**: Purple/blue tones distinguish AI responses
+- **Interaction Feedback**: Smooth transitions, clear hover states
+
+### Interaction Patterns
+- **Animations**: Purposeful, not decorative (60fps target)
+- **Feedback**: Immediate visual response to user actions
+- **Progress**: Clear indication for operations > 1 second
+- **Errors**: Friendly, actionable error messages
+
+## Critical Success Criteria
+
+### Performance Benchmarks
+- **Initial Load**: < 2 seconds on 3G mobile
+- **Message Send**: < 500ms user feedback
+- **Real-Time Sync**: < 500ms latency
+- **UI Responsiveness**: 60fps scrolling and animations
+- **AI Response**: Clear loading states for operations > 5 seconds
+
+### Quality Standards
+- **Zero Data Loss**: Messages must never disappear
+- **Correct Ordering**: Messages display in sent order
+- **Permission Integrity**: Users only access authorized data
+- **Error Recovery**: Graceful degradation, no white screens
+- **Cross-Browser**: Works on Chrome, Safari, Firefox mobile & desktop
+
+## Common Pitfalls to Avoid
+
+❌ **Don't:**
+- Hardcode user data - always use authenticated user context
+- Block UI during async operations without loading states
+- Forget to handle edge cases (empty data, special characters, long text)
+- Implement features that only work on desktop
+- Store sensitive data in localStorage or client state
+- Assume AI webhooks will always respond quickly or successfully
+
+✅ **Do:**
+- Use TypeScript for type safety
+- Implement proper error boundaries
+- Test with multiple concurrent users
+- Handle offline scenarios gracefully
+- Provide clear user feedback for all operations
+- Consider mobile network latency in design
+
+## Testing Philosophy
+
+### Critical Test Scenarios
+1. **Multi-User Real-Time**: 2+ users interacting simultaneously
+2. **AI Workflow**: End-to-end from user question to AI response display
+3. **Permission Systems**: Verify data access restrictions work
+4. **Media Handling**: Upload limits, format support, display
+5. **Edge Cases**: Empty messages, very long messages, special characters
+6. **Network Issues**: Slow connections, offline scenarios, reconnection
+
+### Testing Approach
+- **Manual Testing**: Use multiple browsers/devices simultaneously
+- **User Perspective**: Test as end-user, not developer
+- **Mobile Testing**: Always test on actual mobile devices
+- **Error Scenarios**: Deliberately trigger failures to verify handling
+
+## Integration with RocketHub Ecosystem
+
+### Cross-Product Philosophy
+- **Unified User Experience**: Consistent patterns across Health/AI/EOS Rocket
+- **Shared Design System**: Common components and visual language
+- **Data Connectivity**: Future integration with cross-product insights
+- **Single Identity**: One user account across all products
+
+### Gamification Integration (Planned)
+- Fuel Points system for AI learning and implementation
+- Achievement tracking across products
+- Community engagement rewards
+- Progress visualization
+
+## Development Workflow
+
+### When Adding New Features
+1. **Mobile-First**: Design and build for mobile, then enhance for desktop
+2. **Real-Time Aware**: Consider how feature works with multiple concurrent users
+3. **AI-Ready**: Design with future AI enhancement in mind
+4. **Secure**: Implement proper access controls from start
+5. **Performant**: Test with realistic data volumes
+
+### When Modifying Existing Features
+1. **Preserve Core Functionality**: Never break existing workflows
+2. **Maintain Data Integrity**: Ensure backward compatibility
+3. **Test Thoroughly**: Verify all related features still work
+4. **Document Changes**: Clear comments for complex logic
+5. **Consider Users**: Communicate breaking changes if unavoidable
+
+## Key Development Questions to Always Ask
+
+Before implementing any feature:
+1. **Does this work well on mobile?**
+2. **How does this behave with multiple simultaneous users?**
+3. **What happens if the AI webhook fails or times out?**
+4. **Can users recover from errors without losing work?**
+5. **Is this feature secure and respecting user permissions?**
+6. **Does this maintain our performance benchmarks?**
+7. **Is the user feedback clear and immediate?**
+
+---
+
+**Core Principle**: Astra Intelligence should feel like magic - powerful AI capabilities delivered through an interface so intuitive it becomes invisible. Every technical decision should serve the entrepreneur's journey to leverage AI for business, health, and life optimization.

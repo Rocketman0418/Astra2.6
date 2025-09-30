@@ -188,14 +188,15 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
     
     if (date < now) return 'Overdue';
     
-    // Format in EST timezone
+    // Format in EDT/EST timezone (Eastern Time)
     return date.toLocaleDateString('en-US', { 
       timeZone: 'America/New_York',
       month: 'short', 
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-      timeZoneName: 'short'
+      timeZoneName: 'short',
+      hour12: true
     });
   };
 

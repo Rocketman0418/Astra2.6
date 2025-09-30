@@ -269,9 +269,10 @@ export const useReports = () => {
       const messages: ReportMessage[] = (data || []).map(chat => ({
         id: chat.id,
         chatId: chat.id,
-        content: chat.message,
-        timestamp: chat.created_at,
+        text: chat.message,
+        timestamp: new Date(chat.created_at),
         isUser: false,
+        visualization: !!chat.visualization_data,
         reportMetadata: chat.metadata,
         visualization_data: chat.visualization_data
       }));

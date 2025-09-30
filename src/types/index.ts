@@ -13,8 +13,8 @@ export interface Message {
 export interface ReportMessage {
   id: string;
   chatId: string;
-  content: string;
-  timestamp: string;
+  text: string;
+  timestamp: Date;
   isUser: boolean;
   reportMetadata?: {
     report_title?: string;
@@ -24,6 +24,7 @@ export interface ReportMessage {
     executed_at?: string;
   };
   visualization_data?: string;
+  visualization?: boolean;
 }
 
   messageType?: 'user' | 'astra' | 'system';

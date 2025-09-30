@@ -146,8 +146,12 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
     
     try {
       await runReportNow(report.id);
-      // Close the modal after successful run so user can see the new report
-      onClose();
+      
+      // Wait a moment for the report to be saved, then close modal
+      setTimeout(() => {
+        onClose();
+      }, 1500);
+      
     } catch (error) {
       console.error('Error running report:', error);
       // Don't close modal if there was an error
@@ -184,11 +188,14 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
     
     if (date < now) return 'Overdue';
     
-    return date.toLocaleDateString([], { 
+    // Format in EST timezone
+    return date.toLocaleDateString('en-US', { 
+      timeZone: 'America/New_York',
       month: 'short', 
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZoneName: 'short'
     });
   };
 

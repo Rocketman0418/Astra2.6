@@ -446,10 +446,17 @@ export const useReports = () => {
       }
 
       console.log('✅ Report saved to astra_chats with ID:', chatData.id);
-      // Wait a moment for the webhook to process and then refresh
+      
+      // Force refresh report messages immediately and with a delay to ensure UI updates
       console.log('🔄 Refreshing report messages after execution...');
       await fetchReportMessages();
-      console.log('✅ Report messages refreshed');
+      
+      // Also refresh after a short delay to ensure any async operations complete
+      setTimeout(async () => {
+        console.log('🔄 Secondary refresh of report messages...');
+        await fetchReportMessages();
+        console.log('✅ Report messages refreshed (secondary)');
+      }, 1000);
       
     } catch (err) {
       console.error('Error running report:', err);

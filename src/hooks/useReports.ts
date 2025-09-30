@@ -106,27 +106,7 @@ export const useReports = () => {
       // Calculate next run time if scheduled
       let nextRunAt = null;
       if (reportData.schedule_type === 'scheduled') {
-        // Calculate next run time in JavaScript to ensure proper timezone handling
-        const now = new Date();
-        const [hours, minutes] = reportData.schedule_time.split(':').map(Number);
-        
-        // Create next run date in Eastern Time
-        const nextRun = new Date();
-        nextRun.setHours(hours, minutes, 0, 0);
-        
-        // If the time has already passed today, schedule for tomorrow
-        if (nextRun <= now) {
-          nextRun.setDate(nextRun.getDate() + 1);
-        }
-        
-        // Convert to UTC for storage
-        nextRunAt = nextRun.toISOString();
-        
-        console.log('📅 Calculated next run time:', {
-          inputTime: reportData.schedule_time,
-          localNextRun: nextRun.toLocaleString('en-US', { timeZone: 'America/New_York' }),
-          utcNextRun: nextRunAt
-        });
+        nextRunAt = calculateNextRunTime(reportData.schedule_time);
       }
 
       const { data, error } = await supabase
@@ -173,28 +153,7 @@ export const useReports = () => {
       if (updates.schedule_type === 'scheduled' && (updates.schedule_frequency || updates.schedule_time)) {
         const currentReport = userReports.find(r => r.id === id);
         if (currentReport) {
-          // Calculate next run time in JavaScript to ensure proper timezone handling
-          const scheduleTime = updates.schedule_time || currentReport.schedule_time;
-          const now = new Date();
-          const [hours, minutes] = scheduleTime.split(':').map(Number);
-          
-          // Create next run date in Eastern Time
-          const nextRun = new Date();
-          nextRun.setHours(hours, minutes, 0, 0);
-          
-          // If the time has already passed today, schedule for tomorrow
-          if (nextRun <= now) {
-            nextRun.setDate(nextRun.getDate() + 1);
-          }
-          
-          // Convert to UTC for storage
-          nextRunAt = nextRun.toISOString();
-          
-          console.log('📅 Updated next run time:', {
-            inputTime: scheduleTime,
-            localNextRun: nextRun.toLocaleString('en-US', { timeZone: 'America/New_York' }),
-            utcNextRun: nextRunAt
-          });
+          nextRunAt = calculateNextRunTime(updates.schedule_time || currentReport.schedule_time);
         }
       }
 
@@ -232,6 +191,35 @@ export const useReports = () => {
     }
   }, [user, userReports, fetchUserReports]);
 
+  // Helper function to calculate next run time
+  const calculateNextRunTime = useCallback((scheduleTime: string): string => {
+    const [hours, minutes] = scheduleTime.split(':').map(Number);
+    
+    // Get current time in Eastern timezone
+    const now = new Date();
+    const easternNow = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
+    
+    // Create next run time in Eastern timezone
+    const nextRun = new Date(easternNow);
+    nextRun.setHours(hours, minutes, 0, 0);
+    
+    // If the time has already passed today, schedule for tomorrow
+    if (nextRun <= easternNow) {
+      nextRun.setDate(nextRun.getDate() + 1);
+    }
+    
+    // Convert Eastern time to UTC for database storage
+    const utcTime = new Date(nextRun.toLocaleString("en-US", {timeZone: "UTC"}));
+    
+    console.log('📅 Calculated next run time:', {
+      inputTime: scheduleTime,
+      easternTime: nextRun.toLocaleString('en-US', { timeZone: 'America/New_York' }),
+      utcTime: utcTime.toISOString(),
+      currentEasternTime: easternNow.toLocaleString('en-US', { timeZone: 'America/New_York' })
+    });
+    
+    return utcTime.toISOString();
+  }, []);
   // Delete a report
   const deleteReport = useCallback(async (id: string): Promise<void> => {
     if (!user) return;
@@ -477,6 +465,31 @@ export const useReports = () => {
         console.log('✅ Report messages refreshed (secondary)');
       }, 1000);
       
+      // Update the report's last_run_at and next_run_at after successful execution
+      try {
+        const now = new Date().toISOString();
+        let nextRunAt = null;
+        
+        if (report.schedule_type === 'scheduled') {
+          nextRunAt = calculateNextRunTime(report.schedule_time);
+        }
+        
+        await supabase
+          .from('astra_reports')
+          .update({
+            last_run_at: now,
+            next_run_at: nextRunAt
+          })
+          .eq('id', id);
+          
+        console.log('✅ Updated report schedule after execution');
+        
+        // Refresh user reports to show updated times
+        await fetchUserReports();
+      } catch (scheduleError) {
+        console.error('Error updating report schedule:', scheduleError);
+      }
+      
     } catch (err) {
       console.error('Error running report:', err);
       setError(`Failed to run report: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -488,7 +501,7 @@ export const useReports = () => {
         return newSet;
       });
     }
-  }, [user, userReports, fetchReportMessages]);
+  }, [user, userReports, fetchReportMessages, calculateNextRunTime, fetchUserReports]);
 
   // Initialize data on mount
   useEffect(() => {

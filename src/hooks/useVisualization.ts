@@ -26,15 +26,25 @@ export const useVisualization = (
       });
     }
 
-    // Also mark in database
+    // Also mark in database - fetch existing metadata first to preserve it
     try {
+      const { data: existingMessage } = await supabase
+        .from('astra_chats')
+        .select('metadata')
+        .eq('id', messageId)
+        .maybeSingle();
+
+      const existingMetadata = existingMessage?.metadata || {};
+
       await supabase
         .from('astra_chats')
-        .update({ 
+        .update({
           visualization: true,
-          metadata: { visualization_generating: true }
+          metadata: { ...existingMetadata, visualization_generating: true }
         })
         .eq('id', messageId);
+
+      console.log('✅ Marked visualization as generating in database for message:', messageId);
     } catch (error) {
       console.error('Error marking visualization as generating:', error);
     }
@@ -129,14 +139,22 @@ Return only the HTML code - no other text or formatting.`;
 
       console.log('✅ Visualization generated successfully');
 
-      // Save visualization to database
+      // Save visualization to database - preserve existing metadata
       try {
+        const { data: existingMessage } = await supabase
+          .from('astra_chats')
+          .select('metadata')
+          .eq('id', messageId)
+          .maybeSingle();
+
+        const existingMetadata = existingMessage?.metadata || {};
+
         const { error: updateError } = await supabase
           .from('astra_chats')
-          .update({ 
+          .update({
             visualization_data: cleanedContent,
             visualization: true,
-            metadata: { visualization_generating: false }
+            metadata: { ...existingMetadata, visualization_generating: false }
           })
           .eq('id', messageId);
 
@@ -198,12 +216,20 @@ Return only the HTML code - no other text or formatting.`;
         }
       }));
       
-      // Also update database to mark as failed
+      // Also update database to mark as failed - preserve existing metadata
       try {
+        const { data: existingMessage } = await supabase
+          .from('astra_chats')
+          .select('metadata')
+          .eq('id', messageId)
+          .maybeSingle();
+
+        const existingMetadata = existingMessage?.metadata || {};
+
         await supabase
           .from('astra_chats')
-          .update({ 
-            metadata: { visualization_generating: false, visualization_error: errorMessage }
+          .update({
+            metadata: { ...existingMetadata, visualization_generating: false, visualization_error: errorMessage }
           })
           .eq('id', messageId);
       } catch (dbError) {

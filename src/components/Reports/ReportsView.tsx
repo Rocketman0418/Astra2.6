@@ -4,19 +4,17 @@ import { useReports } from '../../hooks/useReports';
 import { useVisualization } from '../../hooks/useVisualization';
 import { ReportCard } from './ReportCard';
 import { CreateReportModal } from './CreateReportModal';
-import { ManageReportsModal } from './ManageReportsModal';
 import { VisualizationView } from '../VisualizationView';
-import { useReports as useReportsNew } from '../../hooks/useReports';
-import { ManageReportsModal as ManageReportsModalNew } from '../ManageReportsModal';
+import { ManageReportsModal } from '../ManageReportsModal';
 
 export const ReportsView: React.FC = () => {
   const {
     reportMessages,
-    reportConfigs,
+    userReports,
     isLoading,
     error,
     runningReports,
-    executeReport,
+    runReportNow,
     createReport,
     updateReport,
     deleteReport,
@@ -34,10 +32,8 @@ export const ReportsView: React.FC = () => {
     setVisualizationContent
   } = useVisualization();
 
-  const { userReports } = useReportsNew();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showManageModal, setShowManageModal] = useState(false);
-  const [showNewManageModal, setShowNewManageModal] = useState(false);
   const [visualizationStates, setVisualizationStates] = useState<Record<string, any>>({});
 
   // Set up scheduler to check for reports every minute
@@ -136,9 +132,9 @@ export const ReportsView: React.FC = () => {
 
   // Handle running a report again
   const handleRunReport = (reportTitle: string) => {
-    const config = reportConfigs.find(c => c.title === reportTitle);
+    const config = userReports.find(c => c.title === reportTitle);
     if (config) {
-      executeReport(config, true); // Manual run
+      runReportNow(config.id); // Manual run
     }
   };
 
@@ -175,14 +171,6 @@ export const ReportsView: React.FC = () => {
           <div className="flex items-center space-x-2">
             <button
               onClick={() => setShowManageModal(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
-            >
-              <Settings className="w-4 h-4" />
-              <span className="hidden sm:inline">Manage</span>
-            </button>
-            
-            <button
-              onClick={() => setShowNewManageModal(true)}
               className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
             >
               <BarChart3 className="w-4 h-4" />
@@ -283,7 +271,7 @@ export const ReportsView: React.FC = () => {
                   onDeleteMessage={handleDeleteReportMessage}
                   visualizationState={visualizationStates[message.chatId || message.id]}
                   isReportRunning={message.reportMetadata?.report_title ? runningReports.has(
-                    reportConfigs.find(c => c.title === message.reportMetadata?.report_title)?.id || ''
+                    userReports.find(c => c.title === message.reportMetadata?.report_title)?.id || ''
                   ) : false}
                 />
               ))}
@@ -302,16 +290,6 @@ export const ReportsView: React.FC = () => {
       <ManageReportsModal
         isOpen={showManageModal}
         onClose={() => setShowManageModal(false)}
-        reportConfigs={reportConfigs}
-        runningReports={runningReports}
-        onUpdateReport={updateReport}
-        onDeleteReport={deleteReport}
-        onExecuteReport={executeReport}
-      />
-      
-      <ManageReportsModalNew
-        isOpen={showNewManageModal}
-        onClose={() => setShowNewManageModal(false)}
       />
     </div>
   );

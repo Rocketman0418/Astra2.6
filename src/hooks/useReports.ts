@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { ReportMessage } from '../types';
 
 export interface ReportTemplate {
   id: string;
@@ -35,6 +36,8 @@ export const useReports = () => {
   const { user } = useAuth();
   const [templates, setTemplates] = useState<ReportTemplate[]>([]);
   const [userReports, setUserReports] = useState<UserReport[]>([]);
+  const [reportMessages, setReportMessages] = useState<ReportMessage[]>([]);
+  const [runningReports, setRunningReports] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -244,6 +247,78 @@ export const useReports = () => {
     await updateReport(id, { is_active: isActive });
   }, [updateReport]);
 
+  // Fetch report messages from astra_chats table
+  const fetchReportMessages = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('astra_chats')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('mode', 'reports')
+        .eq('message_type', 'astra')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching report messages:', error);
+        return;
+      }
+
+      // Transform to ReportMessage format
+      const messages: ReportMessage[] = (data || []).map(chat => ({
+        id: chat.id,
+        chatId: chat.id,
+        content: chat.message,
+        timestamp: chat.created_at,
+        isUser: false,
+        reportMetadata: chat.metadata,
+        visualization_data: chat.visualization_data
+      }));
+
+      setReportMessages(messages);
+    } catch (err) {
+      console.error('Error in fetchReportMessages:', err);
+    }
+  }, [user]);
+
+  // Check for scheduled reports (placeholder function)
+  const checkScheduledReports = useCallback(async () => {
+    // This would typically check for reports that need to run
+    // For now, it's a placeholder as the N8N workflow handles scheduling
+    console.log('Checking scheduled reports...');
+  }, []);
+
+  // Delete a report message
+  const deleteReportMessage = useCallback(async (messageId: string): Promise<void> => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase
+        .from('astra_chats')
+        .delete()
+        .eq('id', messageId)
+        .eq('user_id', user.id)
+        .eq('mode', 'reports');
+
+      if (error) {
+        console.error('Error deleting report message:', error);
+        setError('Failed to delete report message');
+        return;
+      }
+
+      // Refresh report messages
+      await fetchReportMessages();
+    } catch (err) {
+      console.error('Error in deleteReportMessage:', err);
+      setError('Failed to delete report message');
+    } finally {
+      setLoading(false);
+    }
+  }, [user, fetchReportMessages]);
+
   // Run report manually
   const runReportNow = useCallback(async (id: string): Promise<void> => {
     if (!user) return;
@@ -262,6 +337,7 @@ export const useReports = () => {
 
     try {
       setLoading(true);
+      setRunningReports(prev => new Set(prev).add(id));
 
       const response = await fetch(webhookUrl, {
         method: 'POST',
@@ -291,14 +367,24 @@ export const useReports = () => {
       // Update last run time
       await updateReport(id, { last_run_at: new Date().toISOString() });
 
+      // Refresh report messages after execution
+      setTimeout(() => {
+        fetchReportMessages();
+      }, 2000); // Give some time for the report to be processed
+
       console.log('✅ Report executed manually:', report.title);
     } catch (err) {
       console.error('Error running report:', err);
       setError('Failed to run report');
     } finally {
       setLoading(false);
+      setRunningReports(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
     }
-  }, [user, userReports, updateReport]);
+  }, [user, userReports, updateReport, fetchReportMessages]);
 
   // Set up real-time subscription for user reports
   useEffect(() => {
@@ -327,21 +413,27 @@ export const useReports = () => {
     fetchTemplates();
     if (user) {
       fetchUserReports();
+      fetchReportMessages();
     }
-  }, [user, fetchTemplates, fetchUserReports]);
+  }, [user, fetchTemplates, fetchUserReports, fetchReportMessages]);
 
   return {
     templates,
     userReports,
+    reportMessages,
+    runningReports,
     loading,
     error,
     fetchTemplates,
     fetchUserReports,
+    fetchReportMessages,
     createReport,
     updateReport,
     deleteReport,
     toggleReportActive,
     runReportNow,
+    checkScheduledReports,
+    deleteReportMessage,
     setError
   };
 };

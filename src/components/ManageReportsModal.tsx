@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Plus, Edit2, Trash2, Play, Pause, Calendar, Clock, Zap } from 'lucide-react';
+import { X, Plus, CreditCard as Edit2, Trash2, Play, Pause, Calendar, Clock, Zap } from 'lucide-react';
 import { useReports, ReportTemplate, UserReport } from '../hooks/useReports';
 import { HourOnlyTimePicker } from './HourOnlyTimePicker';
 

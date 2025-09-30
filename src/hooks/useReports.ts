@@ -106,18 +106,27 @@ export const useReports = () => {
       // Calculate next run time if scheduled
       let nextRunAt = null;
       if (reportData.schedule_type === 'scheduled') {
-        const { data: nextRun, error: calcError } = await supabase
-          .rpc('calculate_next_run_time', {
-            p_schedule_frequency: reportData.schedule_frequency,
-            p_schedule_time: reportData.schedule_time,
-            p_current_time: new Date().toISOString()
-          });
-
-        if (calcError) {
-          console.error('Error calculating next run time:', calcError);
-        } else {
-          nextRunAt = nextRun;
+        // Calculate next run time in JavaScript to ensure proper timezone handling
+        const now = new Date();
+        const [hours, minutes] = reportData.schedule_time.split(':').map(Number);
+        
+        // Create next run date in Eastern Time
+        const nextRun = new Date();
+        nextRun.setHours(hours, minutes, 0, 0);
+        
+        // If the time has already passed today, schedule for tomorrow
+        if (nextRun <= now) {
+          nextRun.setDate(nextRun.getDate() + 1);
         }
+        
+        // Convert to UTC for storage
+        nextRunAt = nextRun.toISOString();
+        
+        console.log('📅 Calculated next run time:', {
+          inputTime: reportData.schedule_time,
+          localNextRun: nextRun.toLocaleString('en-US', { timeZone: 'America/New_York' }),
+          utcNextRun: nextRunAt
+        });
       }
 
       const { data, error } = await supabase
@@ -164,18 +173,28 @@ export const useReports = () => {
       if (updates.schedule_type === 'scheduled' && (updates.schedule_frequency || updates.schedule_time)) {
         const currentReport = userReports.find(r => r.id === id);
         if (currentReport) {
-          const { data: nextRun, error: calcError } = await supabase
-            .rpc('calculate_next_run_time', {
-              p_schedule_frequency: updates.schedule_frequency || currentReport.schedule_frequency,
-              p_schedule_time: updates.schedule_time || currentReport.schedule_time,
-              p_current_time: new Date().toISOString()
-            });
-
-          if (calcError) {
-            console.error('Error calculating next run time:', calcError);
-          } else {
-            nextRunAt = nextRun;
+          // Calculate next run time in JavaScript to ensure proper timezone handling
+          const scheduleTime = updates.schedule_time || currentReport.schedule_time;
+          const now = new Date();
+          const [hours, minutes] = scheduleTime.split(':').map(Number);
+          
+          // Create next run date in Eastern Time
+          const nextRun = new Date();
+          nextRun.setHours(hours, minutes, 0, 0);
+          
+          // If the time has already passed today, schedule for tomorrow
+          if (nextRun <= now) {
+            nextRun.setDate(nextRun.getDate() + 1);
           }
+          
+          // Convert to UTC for storage
+          nextRunAt = nextRun.toISOString();
+          
+          console.log('📅 Updated next run time:', {
+            inputTime: scheduleTime,
+            localNextRun: nextRun.toLocaleString('en-US', { timeZone: 'America/New_York' }),
+            utcNextRun: nextRunAt
+          });
         }
       }
 

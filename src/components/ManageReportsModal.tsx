@@ -290,13 +290,6 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
                               {report.template?.icon || '📊'}
                             </span>
                             <h3 className="font-medium text-white">{report.title}</h3>
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              report.is_active 
-                                ? 'bg-green-500/20 text-green-400' 
-                                : 'bg-gray-500/20 text-gray-400'
-                            }`}>
-                              {report.is_active ? 'Active' : 'Paused'}
-                            </span>
                           </div>
                           
                           <div className="flex items-center space-x-4 text-xs text-gray-500 mb-3">
@@ -333,18 +326,6 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
                             title="Run now"
                           >
                             <Play className={`w-4 h-4 ${runningReports.has(report.id) ? 'animate-spin' : ''}`} />
-                          </button>
-                          
-                          <button
-                            onClick={() => toggleReportActive(report.id, !report.is_active)}
-                            className={`p-2 rounded-lg transition-colors ${
-                              report.is_active
-                                ? 'bg-yellow-600 hover:bg-yellow-700 text-white'
-                                : 'bg-green-600 hover:bg-green-700 text-white'
-                            }`}
-                            title={report.is_active ? 'Pause' : 'Resume'}
-                          >
-                            {report.is_active ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                           </button>
                           
                           <button

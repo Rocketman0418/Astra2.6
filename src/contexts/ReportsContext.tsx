@@ -32,11 +32,13 @@ export interface UserReport {
 
 export interface ReportMessage {
   id: string;
-  report_id: string;
-  user_id: string;
-  content: string;
-  created_at: string;
-  report?: UserReport;
+  chatId: string;
+  text: string;
+  timestamp: Date;
+  isUser: boolean;
+  visualization: boolean;
+  reportMetadata?: any;
+  visualization_data?: string;
 }
 
 interface ReportsContextType {
@@ -109,20 +111,32 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     try {
       const { data, error } = await supabase
-        .from('astra_report_messages')
-        .select(`
-          *,
-          report:astra_reports(
-            id,
-            title,
-            template:astra_report_templates(icon)
-          )
-        `)
+        .from('astra_chats')
+        .select('*')
         .eq('user_id', user.id)
+        .eq('mode', 'reports')
+        .eq('message_type', 'astra')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setReportMessages(data || []);
+      if (error) {
+        console.error('Error fetching report messages:', error);
+        return;
+      }
+
+      // Transform to ReportMessage format
+      const messages: ReportMessage[] = (data || []).map(chat => ({
+        id: chat.id,
+        chatId: chat.id,
+        text: chat.message,
+        timestamp: new Date(chat.created_at),
+        isUser: false,
+        visualization: !!chat.visualization_data,
+        reportMetadata: chat.metadata,
+        visualization_data: chat.visualization_data
+      }));
+
+      console.log('📊 [ReportsContext] Fetched report messages:', messages.length);
+      setReportMessages(messages);
     } catch (err) {
       console.error('Error fetching report messages:', err);
     }

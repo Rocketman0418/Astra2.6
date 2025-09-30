@@ -1,5 +1,6 @@
 import React from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ReportsProvider } from './contexts/ReportsContext';
 import { AuthScreen } from './components/auth/AuthScreen';
 import { MainContainer } from './components/MainContainer';
 
@@ -28,7 +29,9 @@ const AppContent: React.FC = () => {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <ReportsProvider>
+        <AppContent />
+      </ReportsProvider>
     </AuthProvider>
   );
 }

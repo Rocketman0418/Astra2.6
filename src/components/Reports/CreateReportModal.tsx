@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Zap, CheckCircle } from 'lucide-react';
-import { useReports, ReportTemplate } from '../../hooks/useReports';
+import { useReportsContext, ReportTemplate } from '../../contexts/ReportsContext';
 import { HourOnlyTimePicker } from '../HourOnlyTimePicker';
 
 interface CreateReportModalProps {
@@ -14,7 +14,7 @@ export const CreateReportModal: React.FC<CreateReportModalProps> = ({
   isOpen,
   onClose
 }) => {
-  const { templates, createReport, loading } = useReports();
+  const { templates, createReport, loading } = useReportsContext();
   const [currentStep, setCurrentStep] = useState<CreateStep>('template');
   const [selectedTemplate, setSelectedTemplate] = useState<ReportTemplate | null>(null);
   const [isCreating, setIsCreating] = useState(false);

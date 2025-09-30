@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Plus, Settings, Play, Pause, Pencil, Trash2, Calendar, Clock, Zap, CheckCircle } from 'lucide-react';
-import { useReports, ReportTemplate, UserReport } from '../hooks/useReports';
+import { useReportsContext, ReportTemplate, UserReport } from '../contexts/ReportsContext';
 import { HourOnlyTimePicker } from './HourOnlyTimePicker';
 
 interface ManageReportsModalProps {
@@ -15,18 +15,18 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
   isOpen,
   onClose
 }) => {
-  const { 
-    templates, 
-    userReports, 
-    loading, 
-    error, 
-    createReport, 
-    updateReport, 
-    deleteReport, 
-    toggleReportActive, 
+  const {
+    templates,
+    userReports,
+    loading,
+    error,
+    createReport,
+    updateReport,
+    deleteReport,
+    toggleReportActive,
     runReportNow,
     runningReports
-  } = useReports();
+  } = useReportsContext();
 
   const [currentView, setCurrentView] = useState<ModalView>('list');
   const [createStep, setCreateStep] = useState<CreateStep>('template');

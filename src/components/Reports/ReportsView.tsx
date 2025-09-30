@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Settings, FileText, Zap, Calendar, BarChart3 } from 'lucide-react';
-import { useReports } from '../../hooks/useReports';
+import { useReportsContext } from '../../contexts/ReportsContext';
 import { useVisualization } from '../../hooks/useVisualization';
 import { ReportCard } from './ReportCard';
 import { CreateReportModal } from '../Reports/CreateReportModal';
@@ -11,7 +11,7 @@ export const ReportsView: React.FC = () => {
   const {
     reportMessages,
     userReports,
-    isLoading,
+    loading: isLoading,
     error,
     runningReports,
     runReportNow,
@@ -21,7 +21,7 @@ export const ReportsView: React.FC = () => {
     checkScheduledReports,
     setError,
     deleteReportMessage
-  } = useReports();
+  } = useReportsContext();
 
   const {
     generateVisualization,

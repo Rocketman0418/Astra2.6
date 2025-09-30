@@ -646,7 +646,7 @@ export const useReports = () => {
             filter: `user_id=eq.${user.id}`
           },
           (payload) => {
-            console.log('📡 Realtime report change:', payload);
+            console.log('📡 [useReports] Realtime report change:', payload);
 
             if (payload.eventType === 'INSERT') {
               // Use setUserReports with callback to check current state
@@ -672,7 +672,9 @@ export const useReports = () => {
             }
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log('📡 [useReports] Subscription status:', status);
+        });
 
       // Cleanup subscription on unmount
       return () => {

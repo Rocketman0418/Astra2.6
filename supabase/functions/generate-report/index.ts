@@ -26,14 +26,14 @@ Deno.serve(async (req: Request) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+    const geminiApiKey = Deno.env.get('VITE_GEMINI_API_KEY');
 
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error('Missing Supabase configuration');
     }
 
     if (!geminiApiKey) {
-      throw new Error('GEMINI_API_KEY environment variable is not set. Please configure it in your Supabase project settings.');
+      throw new Error('VITE_GEMINI_API_KEY environment variable is not set. Please configure it in your Supabase project settings.');
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -78,7 +78,7 @@ Deno.serve(async (req: Request) => {
       .insert({
         user_id: userId,
         mode: 'reports',
-        message_content: reportText,
+        message: reportText,
         message_type: 'astra',
         metadata: {
           report_title: report.title,

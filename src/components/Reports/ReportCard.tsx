@@ -5,7 +5,7 @@ import { VisualizationButton } from '../VisualizationButton';
 
 interface ReportCardProps {
   message: ReportMessage;
-  onCreateVisualization?: (messageId: string, messageText: string) => void;
+  onCreateVisualization?: (messageId: string, messageText: string, visualizationMode?: 'text' | 'insights_card' | 'detailed_report') => void;
   onViewVisualization?: (messageId: string) => void;
   onRunReport?: (reportTitle: string) => void;
   onDeleteMessage?: (messageId: string) => void;
@@ -104,21 +104,29 @@ export const ReportCard: React.FC<ReportCardProps> = ({
   isReportRunning = false
 }) => {
   const [isExpanded, setIsExpanded] = React.useState(false);
-  
+  const [showTextDetail, setShowTextDetail] = React.useState(false);
+
   if (message.isUser) return null; // Don't show user prompts in report cards
 
   const reportMeta = message.reportMetadata;
   const isManualRun = reportMeta?.is_manual_run;
-  
+  const vizMode = reportMeta?.visualization_mode || 'text';
+  const hasVisualization = !!message.visualization_data || visualizationState?.hasVisualization;
+  const isGenerating = visualizationState?.isGenerating || reportMeta?.visualization_generating;
+  const vizError = reportMeta?.visualization_error;
+
   // Extract summary (first paragraph or first 300 characters)
   const fullText = message.text;
   const firstParagraphEnd = fullText.indexOf('\n\n');
-  const summaryText = firstParagraphEnd > 0 && firstParagraphEnd < 300 
+  const summaryText = firstParagraphEnd > 0 && firstParagraphEnd < 300
     ? fullText.substring(0, firstParagraphEnd)
     : fullText.substring(0, 300);
-  
+
   const needsExpansion = fullText.length > summaryText.length;
   const displayText = isExpanded ? fullText : summaryText;
+
+  // For insights_card and detailed_report modes, only show visualization (not text)
+  const showOnlyVisualization = (vizMode === 'insights_card' || vizMode === 'detailed_report') && hasVisualization && !showTextDetail;
   
   const handleDeleteMessage = () => {
     if (window.confirm('Are you sure you want to delete this report instance? This will not affect your scheduled report configuration.')) {
@@ -198,21 +206,43 @@ export const ReportCard: React.FC<ReportCardProps> = ({
       </div>
 
       {/* Report Content */}
-      <div className="p-6">
-        <div className="prose prose-invert max-w-none">
-          {formatMessageText(displayText + (needsExpansion && !isExpanded ? '...' : ''))}
+      {!showOnlyVisualization && (
+        <div className="p-6">
+          {vizError && (
+            <div className="mb-4 p-3 bg-red-900/20 border border-red-700 rounded-lg text-red-300 text-sm">
+              <strong>Visualization failed:</strong> {vizError}. Showing text summary instead.
+            </div>
+          )}
+          <div className="prose prose-invert max-w-none">
+            {formatMessageText(displayText + (needsExpansion && !isExpanded ? '...' : ''))}
+          </div>
+
+          {/* Show More/Less Button */}
+          {needsExpansion && (
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="mt-4 text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors"
+            >
+              {isExpanded ? 'Show Less' : 'Show More'}
+            </button>
+          )}
         </div>
-        
-        {/* Show More/Less Button */}
-        {needsExpansion && (
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="mt-4 text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors"
-          >
-            {isExpanded ? 'Show Less' : 'Show More'}
-          </button>
-        )}
-      </div>
+      )}
+
+      {/* Show "Generating..." state for insights_card and detailed_report */}
+      {(vizMode === 'insights_card' || vizMode === 'detailed_report') && isGenerating && (
+        <div className="p-6 text-center">
+          <div className="inline-flex items-center space-x-3 px-6 py-4 bg-blue-600/20 border border-blue-500/30 rounded-xl">
+            <svg className="animate-spin h-6 w-6 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span className="text-white font-medium">
+              Generating {vizMode === 'insights_card' ? 'Insights Card' : 'Detailed Report'}...
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Report Footer */}
       <div className="bg-gray-800/50 border-t border-gray-700 p-4">
@@ -220,17 +250,55 @@ export const ReportCard: React.FC<ReportCardProps> = ({
           <div className="text-xs text-gray-500">
             Generated by Astra Intelligence • {formatTime(message.timestamp)}
           </div>
-          
-          {/* Visualization Button */}
-          {message.chatId && onCreateVisualization && onViewVisualization && (
-            <VisualizationButton
-              messageId={message.chatId}
-              messageText={message.text}
-              onCreateVisualization={onCreateVisualization}
-              onViewVisualization={onViewVisualization}
-              visualizationState={visualizationState}
-            />
-          )}
+
+          <div className="flex items-center space-x-2">
+            {/* For text mode: show standard visualization button */}
+            {vizMode === 'text' && message.chatId && onCreateVisualization && onViewVisualization && (
+              <VisualizationButton
+                messageId={message.chatId}
+                messageText={message.text}
+                onCreateVisualization={onCreateVisualization}
+                onViewVisualization={onViewVisualization}
+                visualizationState={visualizationState}
+              />
+            )}
+
+            {/* For insights_card and detailed_report modes: show View button (when ready) and More Detail button */}
+            {(vizMode === 'insights_card' || vizMode === 'detailed_report') && !isGenerating && (
+              <>
+                {/* More Detail Button (shows text summary) */}
+                {hasVisualization && (
+                  <button
+                    onClick={() => setShowTextDetail(!showTextDetail)}
+                    className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm font-medium"
+                  >
+                    {showTextDetail ? '← Back to Visual' : 'More Detail'}
+                  </button>
+                )}
+
+                {/* View Card/Report Button */}
+                {hasVisualization && onViewVisualization && message.chatId && (
+                  <button
+                    onClick={() => onViewVisualization(message.chatId!)}
+                    className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg transition-all text-sm font-medium"
+                  >
+                    <BarChart3 className="w-4 h-4" />
+                    <span>View {vizMode === 'insights_card' ? 'Card' : 'Report'}</span>
+                  </button>
+                )}
+
+                {/* Allow creating visualization if it failed or for text mode reports */}
+                {!hasVisualization && !isGenerating && vizError && onCreateVisualization && message.chatId && (
+                  <button
+                    onClick={() => onCreateVisualization(message.chatId!, message.text, vizMode)}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
+                  >
+                    Retry Visualization
+                  </button>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>

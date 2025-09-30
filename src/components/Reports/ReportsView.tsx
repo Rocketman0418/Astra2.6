@@ -171,12 +171,12 @@ export const ReportsView: React.FC = () => {
           <div className="flex items-center space-x-2">
             <button
               onClick={() => setShowManageModal(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              className="flex items-center space-x-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors"
             >
-              <BarChart3 className="w-4 h-4" />
-              <span>Manage Reports ({userReports.length} configured)</span>
+              <Settings className="w-4 h-4" />
+              <span>Manage</span>
             </button>
-            
+
             <button
               onClick={() => setShowCreateModal(true)}
               className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105"

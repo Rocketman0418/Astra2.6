@@ -362,11 +362,15 @@ export const useReports = () => {
         throw new Error(`Failed to execute report: ${response.statusText}`);
       }
 
-      // Refresh report messages after execution
-      await fetchReportMessages();
+      // Wait a moment for the webhook to process and then refresh
+      setTimeout(async () => {
+        await fetchReportMessages();
+      }, 2000);
+      
     } catch (err) {
       console.error('Error running report:', err);
       setError('Failed to run report');
+      throw err; // Re-throw so the modal can handle it
     } finally {
       setRunningReports(prev => {
         const newSet = new Set(prev);

@@ -140,6 +140,20 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
     }
   };
 
+  // Handle running a report and closing modal
+  const handleRunReport = async (report: UserReport) => {
+    if (runningReports.has(report.id)) return;
+    
+    try {
+      await runReportNow(report.id);
+      // Close the modal after successful run so user can see the new report
+      onClose();
+    } catch (error) {
+      console.error('Error running report:', error);
+      // Don't close modal if there was an error
+    }
+  };
+
   // Format schedule display
   const formatSchedule = (report: UserReport) => {
     if (report.schedule_type === 'manual') {
@@ -265,7 +279,7 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
                         
                         <div className="flex items-center space-x-2 ml-4">
                           <button
-                            onClick={() => !runningReports.has(report.id) && runReportNow(report.id)}
+                            onClick={() => handleRunReport(report)}
                             disabled={runningReports.has(report.id)}
                             className={`p-2 rounded-lg transition-colors text-white disabled:opacity-50 ${
                               runningReports.has(report.id)

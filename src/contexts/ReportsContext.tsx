@@ -246,12 +246,14 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
         body: JSON.stringify({
           userId: user.id,
           reportId: report.id,
-          prompt: report.prompt
+          prompt: report.prompt,
+          visualizationMode: report.visualization_mode
         })
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate report');
+        const errorData = await response.json().catch(() => ({ error: 'Failed to generate report' }));
+        throw new Error(errorData.error || 'Failed to generate report');
       }
 
       await fetchReportMessages();

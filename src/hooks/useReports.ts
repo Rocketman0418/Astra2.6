@@ -247,36 +247,18 @@ export const useReports = () => {
   const isEasternDaylightTime = useCallback((date: Date): boolean => {
     // EDT runs from second Sunday in March to first Sunday in November
     const year = date.getFullYear();
-    
+
     // Second Sunday in March
     const marchSecondSunday = new Date(year, 2, 1); // March 1st
     marchSecondSunday.setDate(1 + (7 - marchSecondSunday.getDay()) + 7); // Second Sunday
-    
-    // First Sunday in November  
+
+    // First Sunday in November
     const novemberFirstSunday = new Date(year, 10, 1); // November 1st
     novemberFirstSunday.setDate(1 + (7 - novemberFirstSunday.getDay()) % 7); // First Sunday
-    
+
     return date >= marchSecondSunday && date < novemberFirstSunday;
   }, []);
-    nextRun.setHours(hours, minutes, 0, 0);
-    
-    // If the time has already passed today, schedule for tomorrow
-    if (nextRun <= easternNow) {
-      nextRun.setDate(nextRun.getDate() + 1);
-    }
-    
-    // Convert Eastern time to UTC for database storage
-    const utcTime = new Date(nextRun.toLocaleString("en-US", {timeZone: "UTC"}));
-    
-    console.log('📅 Calculated next run time:', {
-      inputTime: scheduleTime,
-      easternTime: nextRun.toLocaleString('en-US', { timeZone: 'America/New_York' }),
-      utcTime: utcTime.toISOString(),
-      currentEasternTime: easternNow.toLocaleString('en-US', { timeZone: 'America/New_York' })
-    });
-    
-    return utcTime.toISOString();
-  }, []);
+
   // Delete a report
   const deleteReport = useCallback(async (id: string): Promise<void> => {
     if (!user) return;
@@ -465,13 +447,7 @@ export const useReports = () => {
         is_manual_run: true,
         executed_at: new Date().toISOString()
       };
-     
-        }
-        )
-    }
-  }
-  )
-} 
+
       try {
         const jsonResponse = JSON.parse(responseText);
         if (jsonResponse.output) {

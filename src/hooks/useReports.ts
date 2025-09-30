@@ -347,6 +347,7 @@ export const useReports = () => {
         userEmail: user.email
       });
 
+      const requestStartTime = Date.now();
       const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
@@ -367,6 +368,8 @@ export const useReports = () => {
         })
       });
 
+      const requestEndTime = Date.now();
+      const responseTimeMs = requestEndTime - requestStartTime;
       console.log('📡 Webhook response:', {
         status: response.status,
         statusText: response.statusText,
@@ -389,12 +392,64 @@ export const useReports = () => {
         responsePreview: responseText.substring(0, 200) + '...'
       });
 
+      // Parse the response to get the actual report content
+      let reportContent = responseText;
+      let metadata: any = {
+        report_title: report.title,
+        report_schedule: report.schedule_time,
+        report_frequency: report.schedule_frequency,
+        is_manual_run: true,
+        executed_at: new Date().toISOString()
+      };
+      
+      try {
+        const jsonResponse = JSON.parse(responseText);
+        if (jsonResponse.output) {
+          reportContent = jsonResponse.output;
+        }
+        if (jsonResponse.metadata) {
+          metadata = { ...metadata, ...jsonResponse.metadata };
+        }
+      } catch (e) {
+        // Use raw text if not JSON
+        console.log('📝 Using raw response text as report content');
+      }
+
+      console.log('💾 Saving report to astra_chats table...');
+      
+      // Save the report response to astra_chats table
+      const { data: chatData, error: chatError } = await supabase
+        .from('astra_chats')
+        .insert({
+          user_id: user.id,
+          user_email: user.email,
+          user_name: 'Astra',
+          message: reportContent,
+          message_type: 'astra',
+          conversation_id: null,
+          response_time_ms: responseTimeMs,
+          tokens_used: {},
+          model_used: 'n8n-workflow',
+          metadata: metadata,
+          visualization: false,
+          mode: 'reports',
+          mentions: [],
+          astra_prompt: report.prompt,
+          visualization_data: null
+        })
+        .select()
+        .single();
+
+      if (chatError) {
+        console.error('❌ Error saving report to astra_chats:', chatError);
+        throw new Error(`Failed to save report: ${chatError.message}`);
+      }
+
+      console.log('✅ Report saved to astra_chats with ID:', chatData.id);
       // Wait a moment for the webhook to process and then refresh
-      setTimeout(async () => {
-        console.log('🔄 Refreshing report messages after execution...');
-        await fetchReportMessages();
-        console.log('✅ Report messages refreshed');
-      }, 2000);
+      console.log('🔄 Refreshing report messages after execution...');
+      await fetchReportMessages();
+      console.log('✅ Report messages refreshed');
       
     } catch (err) {
       console.error('Error running report:', err);

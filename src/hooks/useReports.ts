@@ -194,53 +194,61 @@ export const useReports = () => {
   // Helper function to calculate next run time
   const calculateNextRunTime = useCallback((scheduleTime: string): string => {
     console.log('🕐 calculateNextRunTime: Input scheduleTime:', scheduleTime);
-    
+
     const [hours, minutes] = scheduleTime.split(':').map(Number);
     console.log('🕐 calculateNextRunTime: Parsed hours:', hours, 'minutes:', minutes);
-    
-    // Get current time in Eastern timezone
+
+    // Get current time in UTC
     const now = new Date();
     console.log('🕐 calculateNextRunTime: Current UTC time:', now.toISOString());
-    
-    // Create a date object for today at the scheduled time in Eastern timezone
-    const today = new Date();
-    const nextRun = new Date(today.getFullYear(), today.getMonth(), today.getDate(), hours, minutes, 0, 0);
-    console.log('🕐 calculateNextRunTime: Next run in local time:', nextRun.toLocaleString());
-    
-    // Convert to Eastern timezone by creating a new date with the Eastern time
-    const easternOffset = -5; // EST is UTC-5, EDT is UTC-4, but we'll handle this properly
-    const easternTime = new Date(nextRun.getTime());
-    
-    // Check if we need to schedule for tomorrow
-    const nowInEastern = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
-    console.log('🕐 calculateNextRunTime: Current Eastern time:', nowInEastern.toLocaleString());
-    
-    // Create the scheduled time for today in Eastern timezone
-    const todayEastern = new Date(nowInEastern.getFullYear(), nowInEastern.getMonth(), nowInEastern.getDate(), hours, minutes, 0, 0);
-    console.log('🕐 calculateNextRunTime: Today scheduled time (local):', todayEastern.toLocaleString());
-    
+
+    // Get current time in Eastern timezone
+    const nowInEasternStr = now.toLocaleString("en-US", {timeZone: "America/New_York"});
+    const nowInEastern = new Date(nowInEasternStr);
+    console.log('🕐 calculateNextRunTime: Current Eastern time:', nowInEasternStr);
+
+    // Create the scheduled time for today in Eastern timezone (as a string first)
+    const year = nowInEastern.getFullYear();
+    const month = nowInEastern.getMonth();
+    const day = nowInEastern.getDate();
+
+    // Build a date string that represents the target time in Eastern timezone
+    const targetEasternStr = `${month + 1}/${day}/${year} ${hours}:${minutes.toString().padStart(2, '0')}:00`;
+    console.log('🕐 calculateNextRunTime: Target Eastern time string:', targetEasternStr);
+
+    // Parse this as if it were Eastern time, then check if we need tomorrow
+    const targetEastern = new Date(targetEasternStr);
+
     // If the scheduled time has already passed today, schedule for tomorrow
-    if (todayEastern <= nowInEastern) {
-      todayEastern.setDate(todayEastern.getDate() + 1);
-      console.log('🕐 calculateNextRunTime: Scheduled for tomorrow:', todayEastern.toLocaleString());
+    if (targetEastern <= nowInEastern) {
+      targetEastern.setDate(targetEastern.getDate() + 1);
+      console.log('🕐 calculateNextRunTime: Scheduled for tomorrow (Eastern):', targetEastern.toLocaleString());
+    } else {
+      console.log('🕐 calculateNextRunTime: Scheduled for today (Eastern):', targetEastern.toLocaleString());
     }
-    
-    // Now we need to convert this Eastern time to UTC for database storage
-    // Create a date string in Eastern timezone format and parse it as UTC
-    const easternDateStr = todayEastern.toLocaleString('sv-SE', {timeZone: 'America/New_York'});
-    const utcTime = new Date(easternDateStr + 'Z'); // Add Z to treat as UTC
-    
-    // Adjust for timezone offset (Eastern is UTC-5 in winter, UTC-4 in summer)
-    const isEDT = isEasternDaylightTime(todayEastern);
+
+    // Now convert this local Eastern time to UTC
+    // We need to create a UTC date that when displayed in Eastern time shows our target time
+    const isEDT = isEasternDaylightTime(targetEastern);
     const offsetHours = isEDT ? 4 : 5; // EDT is UTC-4, EST is UTC-5
-    const finalUtcTime = new Date(todayEastern.getTime() + (offsetHours * 60 * 60 * 1000));
-    
+
+    // Add the offset to get UTC time
+    const utcTime = new Date(
+      targetEastern.getFullYear(),
+      targetEastern.getMonth(),
+      targetEastern.getDate(),
+      targetEastern.getHours() + offsetHours,
+      targetEastern.getMinutes(),
+      0,
+      0
+    );
+
     console.log('🕐 calculateNextRunTime: Is EDT?', isEDT);
     console.log('🕐 calculateNextRunTime: Offset hours:', offsetHours);
-    console.log('🕐 calculateNextRunTime: Final UTC time:', finalUtcTime.toISOString());
-    console.log('🕐 calculateNextRunTime: Final Eastern time:', finalUtcTime.toLocaleString('en-US', {timeZone: 'America/New_York'}));
-    
-    return finalUtcTime.toISOString();
+    console.log('🕐 calculateNextRunTime: Final UTC time:', utcTime.toISOString());
+    console.log('🕐 calculateNextRunTime: Verification - UTC converted back to Eastern:', utcTime.toLocaleString('en-US', {timeZone: 'America/New_York'}));
+
+    return utcTime.toISOString();
   }, []);
   
   // Helper function to determine if a date is in Eastern Daylight Time

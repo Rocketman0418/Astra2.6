@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Zap } from 'lucide-react';
+import { X, Zap, CheckCircle } from 'lucide-react';
 import { useReports, ReportTemplate } from '../../hooks/useReports';
 import { HourOnlyTimePicker } from '../HourOnlyTimePicker';
 
@@ -8,7 +8,7 @@ interface CreateReportModalProps {
   onClose: () => void;
 }
 
-type CreateStep = 'template' | 'configure';
+type CreateStep = 'template' | 'configure' | 'success';
 
 export const CreateReportModal: React.FC<CreateReportModalProps> = ({
   isOpen,
@@ -18,6 +18,7 @@ export const CreateReportModal: React.FC<CreateReportModalProps> = ({
   const [currentStep, setCurrentStep] = useState<CreateStep>('template');
   const [selectedTemplate, setSelectedTemplate] = useState<ReportTemplate | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [createdReportTitle, setCreatedReportTitle] = useState('');
   const [formData, setFormData] = useState({
     title: '',
     prompt: '',
@@ -31,6 +32,8 @@ export const CreateReportModal: React.FC<CreateReportModalProps> = ({
   const resetForm = () => {
     setCurrentStep('template');
     setSelectedTemplate(null);
+    setIsCreating(false);
+    setCreatedReportTitle('');
     setFormData({
       title: '',
       prompt: '',
@@ -83,6 +86,7 @@ export const CreateReportModal: React.FC<CreateReportModalProps> = ({
     }
 
     setIsCreating(true);
+    setCreatedReportTitle(formData.title);
 
     const reportData = {
       title: formData.title,
@@ -97,11 +101,14 @@ export const CreateReportModal: React.FC<CreateReportModalProps> = ({
 
     await createReport(reportData);
 
-    // Brief delay to show success state
+    // Show success screen
+    setIsCreating(false);
+    setCurrentStep('success');
+
+    // Auto-close after showing success for 2.5 seconds
     setTimeout(() => {
-      setIsCreating(false);
       handleClose();
-    }, 500);
+    }, 2500);
   };
 
   if (!isOpen) return null;
@@ -351,6 +358,41 @@ export const CreateReportModal: React.FC<CreateReportModalProps> = ({
                   ) : (
                     <span>Create Report</span>
                   )}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Success Screen */}
+          {currentStep === 'success' && (
+            <div className="py-12">
+              <div className="text-center space-y-6">
+                <div className="flex justify-center">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-green-500/20 rounded-full animate-ping"></div>
+                    <CheckCircle className="w-20 h-20 text-green-500 relative" />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <h3 className="text-2xl font-bold text-white">Report Created!</h3>
+                  <p className="text-gray-400">
+                    <span className="text-white font-medium">{createdReportTitle}</span> has been successfully created
+                  </p>
+                </div>
+
+                <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4 max-w-md mx-auto">
+                  <p className="text-sm text-gray-300">
+                    Your report is now active and will run according to its schedule.
+                    You can manage it anytime from the Manage Reports screen.
+                  </p>
+                </div>
+
+                <button
+                  onClick={handleClose}
+                  className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                >
+                  Close
                 </button>
               </div>
             </div>

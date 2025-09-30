@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Plus, Settings, Play, Pause, Pencil, Trash2, Calendar, Clock, Zap } from 'lucide-react';
+import { X, Plus, Settings, Play, Pause, Pencil, Trash2, Calendar, Clock, Zap, CheckCircle } from 'lucide-react';
 import { useReports, ReportTemplate, UserReport } from '../hooks/useReports';
 import { HourOnlyTimePicker } from './HourOnlyTimePicker';
 
@@ -8,7 +8,7 @@ interface ManageReportsModalProps {
   onClose: () => void;
 }
 
-type ModalView = 'list' | 'create' | 'edit';
+type ModalView = 'list' | 'create' | 'edit' | 'success';
 type CreateStep = 'template' | 'configure' | 'review';
 
 export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
@@ -33,6 +33,7 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
   const [editingReport, setEditingReport] = useState<UserReport | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<ReportTemplate | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [createdReportTitle, setCreatedReportTitle] = useState('');
   const [formData, setFormData] = useState({
     title: '',
     prompt: '',
@@ -48,6 +49,8 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
     setCreateStep('template');
     setEditingReport(null);
     setSelectedTemplate(null);
+    setIsSubmitting(false);
+    setCreatedReportTitle('');
     setFormData({
       title: '',
       prompt: '',
@@ -122,6 +125,7 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
     }
 
     setIsSubmitting(true);
+    setCreatedReportTitle(formData.title);
 
     const reportData = {
       title: formData.title,
@@ -137,15 +141,21 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
     try {
       if (editingReport) {
         await updateReport(editingReport.id, reportData);
+        // For edits, close immediately
+        await new Promise(resolve => setTimeout(resolve, 500));
+        setIsSubmitting(false);
+        handleClose();
       } else {
         await createReport(reportData);
+        // For new reports, show success screen
+        setIsSubmitting(false);
+        setCurrentView('success');
+
+        // Auto-close after showing success for 2.5 seconds
+        setTimeout(() => {
+          handleClose();
+        }, 2500);
       }
-
-      // Brief delay to ensure state updates propagate
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      setIsSubmitting(false);
-      handleClose();
     } catch (error) {
       console.error('Error submitting report:', error);
       setIsSubmitting(false);
@@ -595,6 +605,41 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Success View */}
+          {currentView === 'success' && (
+            <div className="py-12">
+              <div className="text-center space-y-6">
+                <div className="flex justify-center">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-green-500/20 rounded-full animate-ping"></div>
+                    <CheckCircle className="w-20 h-20 text-green-500 relative" />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <h3 className="text-2xl font-bold text-white">Report Created!</h3>
+                  <p className="text-gray-400">
+                    <span className="text-white font-medium">{createdReportTitle}</span> has been successfully created
+                  </p>
+                </div>
+
+                <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4 max-w-md mx-auto">
+                  <p className="text-sm text-gray-300">
+                    Your report is now active and will run according to its schedule.
+                    You can manage it anytime from the Manage Reports screen.
+                  </p>
+                </div>
+
+                <button
+                  onClick={handleClose}
+                  className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           )}
         </div>

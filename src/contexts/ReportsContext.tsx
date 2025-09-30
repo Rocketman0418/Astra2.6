@@ -297,7 +297,7 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       fetchUserReports();
       fetchReportMessages();
 
-      // Set up realtime subscription
+      // Set up realtime subscription for report configs
       const reportsChannel = supabase
         .channel('user-reports-global')
         .on(
@@ -322,8 +322,34 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
           console.log('📡 [ReportsContext] Subscription status:', status);
         });
 
+      // Set up realtime subscription for report messages (astra_chats with mode='reports')
+      const messagesChannel = supabase
+        .channel('user-report-messages')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'astra_chats',
+            filter: `user_id=eq.${user.id}`
+          },
+          (payload) => {
+            console.log('📡 [ReportsContext] Report messages realtime event:', payload.eventType, payload);
+
+            // Only refresh if it's a reports mode message
+            if (payload.new && (payload.new as any).mode === 'reports') {
+              console.log('📡 [ReportsContext] Reports message updated, refreshing...');
+              fetchReportMessages();
+            }
+          }
+        )
+        .subscribe((status) => {
+          console.log('📡 [ReportsContext] Messages subscription status:', status);
+        });
+
       return () => {
         supabase.removeChannel(reportsChannel);
+        supabase.removeChannel(messagesChannel);
       };
     }
   }, [user, fetchTemplates, fetchUserReports, fetchReportMessages]);

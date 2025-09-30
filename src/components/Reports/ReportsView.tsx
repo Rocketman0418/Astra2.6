@@ -261,20 +261,48 @@ export const ReportsView: React.FC = () => {
           {/* Report Cards */}
           {reportMessages.length > 0 && (
             <div className="space-y-6">
-              {reportMessages.map((message) => (
-                <ReportCard
-                  key={message.id}
-                  message={message}
-                  onCreateVisualization={handleCreateVisualization}
-                  onViewVisualization={handleViewVisualization}
-                  onRunReport={handleRunReport}
-                  onDeleteMessage={handleDeleteReportMessage}
-                  visualizationState={visualizationStates[message.chatId || message.id]}
-                  isReportRunning={message.reportMetadata?.report_title ? runningReports.has(
-                    userReports.find(c => c.title === message.reportMetadata?.report_title)?.id || ''
-                  ) : false}
-                />
-              ))}
+              {reportMessages.map((message) => {
+                const messageId = message.chatId || message.id;
+
+                // Compute visualization state - check database first, then local state
+                let visualizationState = visualizationStates[messageId];
+
+                // If no local state, check database metadata for generating status
+                // reportMetadata is the chat.metadata field from database
+                if (!visualizationState) {
+                  const metadata = message.reportMetadata || {};
+
+                  if (metadata.visualization_generating) {
+                    visualizationState = {
+                      isGenerating: true,
+                      content: null,
+                      hasVisualization: false
+                    };
+                  } else if (message.visualization_data) {
+                    // If visualization_data exists in database, use that
+                    visualizationState = {
+                      isGenerating: false,
+                      content: message.visualization_data,
+                      hasVisualization: true
+                    };
+                  }
+                }
+
+                return (
+                  <ReportCard
+                    key={message.id}
+                    message={message}
+                    onCreateVisualization={handleCreateVisualization}
+                    onViewVisualization={handleViewVisualization}
+                    onRunReport={handleRunReport}
+                    onDeleteMessage={handleDeleteReportMessage}
+                    visualizationState={visualizationState}
+                    isReportRunning={message.reportMetadata?.report_title ? runningReports.has(
+                      userReports.find(c => c.title === message.reportMetadata?.report_title)?.id || ''
+                    ) : false}
+                  />
+                );
+              })}
             </div>
           )}
         </div>

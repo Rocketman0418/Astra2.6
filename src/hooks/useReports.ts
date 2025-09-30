@@ -465,7 +465,13 @@ export const useReports = () => {
         is_manual_run: true,
         executed_at: new Date().toISOString()
       };
-      
+     
+        }
+        )
+    }
+  }
+  )
+} 
       try {
         const jsonResponse = JSON.parse(responseText);
         if (jsonResponse.output) {

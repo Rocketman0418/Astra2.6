@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Edit2, Trash2, Play, Pause, Calendar, Clock } from 'lucide-react';
+import { X, CreditCard as Edit2, Trash2, Play, Pause, Calendar, Clock } from 'lucide-react';
 import { ReportConfig } from '../../types';
 
 interface ManageReportsModalProps {
@@ -23,17 +23,24 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<ReportConfig>>({});
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleEdit = (config: ReportConfig) => {
     setEditingId(config.id);
     setEditForm(config);
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (editingId && editForm) {
-      onUpdateReport(editingId, editForm);
-      setEditingId(null);
-      setEditForm({});
+      setIsSaving(true);
+      await onUpdateReport(editingId, editForm);
+
+      // Brief delay to show success state
+      setTimeout(() => {
+        setIsSaving(false);
+        setEditingId(null);
+        setEditForm({});
+      }, 500);
     }
   };
 
@@ -172,15 +179,27 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
                       <div className="flex justify-end space-x-2">
                         <button
                           onClick={handleCancelEdit}
-                          className="px-3 py-2 text-gray-400 hover:text-white transition-colors"
+                          disabled={isSaving}
+                          className="px-3 py-2 text-gray-400 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           Cancel
                         </button>
                         <button
                           onClick={handleSaveEdit}
-                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                          disabled={isSaving}
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
                         >
-                          Save
+                          {isSaving ? (
+                            <>
+                              <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              <span>Saving...</span>
+                            </>
+                          ) : (
+                            <span>Save</span>
+                          )}
                         </button>
                       </div>
                     </div>

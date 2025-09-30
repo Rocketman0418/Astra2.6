@@ -42,6 +42,13 @@ Deno.serve(async (req: Request) => {
 
     console.log('📊 Generating report for user:', userId, 'reportId:', reportId);
 
+    // Fetch user details
+    const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
+    
+    if (userError || !userData?.user?.email) {
+      throw new Error('User not found or email unavailable');
+    }
+
     // Fetch report configuration
     const { data: report, error: reportError } = await supabase
       .from('astra_reports')
@@ -77,6 +84,7 @@ Deno.serve(async (req: Request) => {
       .from('astra_chats')
       .insert({
         user_id: userId,
+        user_email: userData.user.email,
         mode: 'reports',
         message: reportText,
         message_type: 'astra',

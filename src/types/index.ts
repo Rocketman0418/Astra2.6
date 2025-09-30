@@ -96,6 +96,7 @@ export interface UserReport {
   schedule_type: 'manual' | 'scheduled';
   schedule_frequency: string;
   schedule_time: string;
+  schedule_day: number | null;
   is_active: boolean;
   last_run_at: string | null;
   next_run_at: string | null;

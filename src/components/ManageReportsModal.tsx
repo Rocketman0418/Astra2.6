@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Plus, Settings, Play, Pause, CreditCard as Edit2, Trash2, Calendar, Clock, Zap } from 'lucide-react';
+import { X, Plus, Settings, Play, Pause, Pencil, Trash2, Calendar, Clock, Zap } from 'lucide-react';
 import { useReports, ReportTemplate, UserReport } from '../hooks/useReports';
 import { HourOnlyTimePicker } from './HourOnlyTimePicker';
 
@@ -37,7 +37,8 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
     prompt: '',
     schedule_type: 'scheduled' as 'manual' | 'scheduled',
     schedule_frequency: 'daily',
-    schedule_time: '07:00'
+    schedule_time: '07:00',
+    schedule_day: null as number | null
   });
 
   // Reset form and view state
@@ -51,7 +52,8 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
       prompt: '',
       schedule_type: 'scheduled',
       schedule_frequency: 'daily',
-      schedule_time: '07:00'
+      schedule_time: '07:00',
+      schedule_day: null
     });
   };
 
@@ -76,7 +78,8 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
       prompt: report.prompt,
       schedule_type: report.schedule_type,
       schedule_frequency: report.schedule_frequency,
-      schedule_time: report.schedule_time
+      schedule_time: report.schedule_time,
+      schedule_day: report.schedule_day
     });
     setCurrentView('edit');
     setCreateStep('configure');
@@ -85,12 +88,14 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
   // Handle template selection
   const handleTemplateSelect = (template: ReportTemplate) => {
     setSelectedTemplate(template);
+    const scheduleDay = template.default_schedule === 'weekly' ? 1 : template.default_schedule === 'monthly' ? 1 : null;
     setFormData({
       title: template.name,
       prompt: template.prompt_template,
       schedule_type: 'scheduled',
       schedule_frequency: template.default_schedule,
-      schedule_time: template.default_time
+      schedule_time: template.default_time,
+      schedule_day: scheduleDay
     });
     setCreateStep('configure');
   };
@@ -103,7 +108,8 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
       prompt: '',
       schedule_type: 'scheduled',
       schedule_frequency: 'daily',
-      schedule_time: '07:00'
+      schedule_time: '07:00',
+      schedule_day: null
     });
     setCreateStep('configure');
   };
@@ -120,6 +126,7 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
       schedule_type: formData.schedule_type,
       schedule_frequency: formData.schedule_frequency,
       schedule_time: formData.schedule_time,
+      schedule_day: formData.schedule_day,
       report_template_id: selectedTemplate?.id || null,
       is_active: true
     };
@@ -166,14 +173,19 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
 
     const time = new Date(`2000-01-01T${report.schedule_time}`);
     const timeStr = time.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-    
+
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
     switch (report.schedule_frequency) {
       case 'daily':
         return `Daily at ${timeStr}`;
       case 'weekly':
-        return `Weekly at ${timeStr}`;
+        const dayOfWeek = report.schedule_day ?? 1;
+        return `Weekly on ${dayNames[dayOfWeek]} at ${timeStr}`;
       case 'monthly':
-        return `Monthly at ${timeStr}`;
+        const dayOfMonth = report.schedule_day ?? 1;
+        const suffix = dayOfMonth === 1 ? 'st' : dayOfMonth === 2 ? 'nd' : dayOfMonth === 3 ? 'rd' : 'th';
+        return `Monthly on the ${dayOfMonth}${suffix} at ${timeStr}`;
       default:
         return `${report.schedule_frequency} at ${timeStr}`;
     }
@@ -318,7 +330,7 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
                             className="p-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
                             title="Edit"
                           >
-                            <Edit2 className="w-4 h-4" />
+                            <Pencil className="w-4 h-4" />
                           </button>
                           
                           <button
@@ -471,27 +483,73 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
 
                     {/* Schedule Configuration */}
                     {formData.schedule_type === 'scheduled' && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">
-                            Frequency
-                          </label>
-                          <select
-                            value={formData.schedule_frequency}
-                            onChange={(e) => setFormData({ ...formData, schedule_frequency: e.target.value })}
-                            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
-                          >
-                            <option value="daily">Daily</option>
-                            <option value="weekly">Weekly</option>
-                            <option value="monthly">Monthly</option>
-                          </select>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-300 mb-2">
+                              Frequency
+                            </label>
+                            <select
+                              value={formData.schedule_frequency}
+                              onChange={(e) => {
+                                const freq = e.target.value;
+                                const defaultDay = freq === 'weekly' ? 1 : freq === 'monthly' ? 1 : null;
+                                setFormData({ ...formData, schedule_frequency: freq, schedule_day: defaultDay });
+                              }}
+                              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                            >
+                              <option value="daily">Daily</option>
+                              <option value="weekly">Weekly</option>
+                              <option value="monthly">Monthly</option>
+                            </select>
+                          </div>
+
+                          <HourOnlyTimePicker
+                            value={formData.schedule_time}
+                            onChange={(time) => setFormData({ ...formData, schedule_time: time })}
+                            label="Time"
+                          />
                         </div>
 
-                        <HourOnlyTimePicker
-                          value={formData.schedule_time}
-                          onChange={(time) => setFormData({ ...formData, schedule_time: time })}
-                          label="Time"
-                        />
+                        {/* Day of Week Selector for Weekly Reports */}
+                        {formData.schedule_frequency === 'weekly' && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-300 mb-2">
+                              Day of Week
+                            </label>
+                            <select
+                              value={formData.schedule_day ?? 1}
+                              onChange={(e) => setFormData({ ...formData, schedule_day: parseInt(e.target.value) })}
+                              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                            >
+                              <option value="0">Sunday</option>
+                              <option value="1">Monday</option>
+                              <option value="2">Tuesday</option>
+                              <option value="3">Wednesday</option>
+                              <option value="4">Thursday</option>
+                              <option value="5">Friday</option>
+                              <option value="6">Saturday</option>
+                            </select>
+                          </div>
+                        )}
+
+                        {/* Day of Month Selector for Monthly Reports */}
+                        {formData.schedule_frequency === 'monthly' && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-300 mb-2">
+                              Day of Month
+                            </label>
+                            <select
+                              value={formData.schedule_day ?? 1}
+                              onChange={(e) => setFormData({ ...formData, schedule_day: parseInt(e.target.value) })}
+                              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                            >
+                              {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                                <option key={day} value={day}>{day}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

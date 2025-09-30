@@ -106,7 +106,11 @@ export const useReports = () => {
       // Calculate next run time if scheduled
       let nextRunAt = null;
       if (reportData.schedule_type === 'scheduled') {
-        nextRunAt = calculateNextRunTime(reportData.schedule_time);
+        nextRunAt = calculateNextRunTime(
+          reportData.schedule_time,
+          reportData.schedule_frequency,
+          reportData.schedule_day
+        );
       }
 
       const { data, error } = await supabase
@@ -153,10 +157,14 @@ export const useReports = () => {
 
       // Calculate next run time if schedule changed
       let nextRunAt = updates.next_run_at;
-      if (updates.schedule_type === 'scheduled' && (updates.schedule_frequency || updates.schedule_time)) {
+      if (updates.schedule_type === 'scheduled' && (updates.schedule_frequency || updates.schedule_time || updates.schedule_day !== undefined)) {
         const currentReport = userReports.find(r => r.id === id);
         if (currentReport) {
-          nextRunAt = calculateNextRunTime(updates.schedule_time || currentReport.schedule_time);
+          nextRunAt = calculateNextRunTime(
+            updates.schedule_time || currentReport.schedule_time,
+            updates.schedule_frequency || currentReport.schedule_frequency,
+            updates.schedule_day !== undefined ? updates.schedule_day : currentReport.schedule_day
+          );
         }
       }
 
@@ -198,15 +206,18 @@ export const useReports = () => {
   }, [user, userReports, fetchUserReports]);
 
   // Helper function to calculate next run time
-  const calculateNextRunTime = useCallback((scheduleTime: string): string => {
-    console.log('🕐 calculateNextRunTime: Input scheduleTime:', scheduleTime);
+  const calculateNextRunTime = useCallback((
+    scheduleTime: string,
+    scheduleFrequency: string,
+    scheduleDay: number | null
+  ): string => {
+    console.log('🕐 calculateNextRunTime:', { scheduleTime, scheduleFrequency, scheduleDay });
 
     const [hours, minutes] = scheduleTime.split(':').map(Number);
-    console.log('🕐 calculateNextRunTime: Parsed hours:', hours, 'minutes:', minutes);
 
     // Get current UTC time
     const now = new Date();
-    console.log('🕐 calculateNextRunTime: Current UTC time:', now.toISOString());
+    console.log('🕐 Current UTC time:', now.toISOString());
 
     // Get current date/time in Eastern timezone using formatter
     const easternFormatter = new Intl.DateTimeFormat('en-US', {
@@ -217,7 +228,8 @@ export const useReports = () => {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
-      hour12: false
+      hour12: false,
+      weekday: 'short'
     });
 
     const easternParts = easternFormatter.formatToParts(now);
@@ -230,36 +242,77 @@ export const useReports = () => {
 
     const currentEasternHour = parseInt(easternValues.hour);
     const currentEasternMinute = parseInt(easternValues.minute);
-
-    console.log('🕐 Current Eastern time:', `${easternValues.month}/${easternValues.day}/${easternValues.year} ${easternValues.hour}:${easternValues.minute}:${easternValues.second}`);
-
-    // Determine if we need tomorrow
     let targetDay = parseInt(easternValues.day);
     let targetMonth = parseInt(easternValues.month);
     let targetYear = parseInt(easternValues.year);
 
+    console.log('🕐 Current Eastern time:', `${easternValues.month}/${easternValues.day}/${easternValues.year} ${easternValues.hour}:${easternValues.minute}`);
+
     const scheduledMinutes = hours * 60 + minutes;
     const currentMinutes = currentEasternHour * 60 + currentEasternMinute;
+    const timeHasPassedToday = scheduledMinutes <= currentMinutes;
 
-    if (scheduledMinutes <= currentMinutes) {
-      // Schedule for tomorrow
-      const tomorrow = new Date(targetYear, targetMonth - 1, targetDay + 1);
-      targetDay = tomorrow.getDate();
-      targetMonth = tomorrow.getMonth() + 1;
-      targetYear = tomorrow.getFullYear();
-      console.log('🕐 Scheduled for tomorrow (Eastern)');
-    } else {
-      console.log('🕐 Scheduled for today (Eastern)');
+    if (scheduleFrequency === 'daily') {
+      // For daily reports: run today if time hasn't passed, otherwise tomorrow
+      if (timeHasPassedToday) {
+        const tomorrow = new Date(targetYear, targetMonth - 1, targetDay + 1);
+        targetDay = tomorrow.getDate();
+        targetMonth = tomorrow.getMonth() + 1;
+        targetYear = tomorrow.getFullYear();
+        console.log('🕐 Daily: Scheduled for tomorrow (Eastern)');
+      } else {
+        console.log('🕐 Daily: Scheduled for today (Eastern)');
+      }
+    } else if (scheduleFrequency === 'weekly') {
+      // For weekly reports: find next occurrence of the specified day of week
+      const targetDayOfWeek = scheduleDay ?? 1; // Default to Monday if not specified
+      const currentDate = new Date(targetYear, targetMonth - 1, targetDay);
+      const currentDayOfWeek = currentDate.getDay();
+
+      let daysUntilTarget = targetDayOfWeek - currentDayOfWeek;
+
+      // If target day is today but time has passed, schedule for next week
+      if (daysUntilTarget === 0 && timeHasPassedToday) {
+        daysUntilTarget = 7;
+      } else if (daysUntilTarget < 0) {
+        // Target day is earlier in the week, so next occurrence is next week
+        daysUntilTarget += 7;
+      } else if (daysUntilTarget === 0) {
+        // Target day is today and time hasn't passed
+        daysUntilTarget = 0;
+      }
+
+      const nextDate = new Date(targetYear, targetMonth - 1, targetDay + daysUntilTarget);
+      targetDay = nextDate.getDate();
+      targetMonth = nextDate.getMonth() + 1;
+      targetYear = nextDate.getFullYear();
+      console.log('🕐 Weekly: Scheduled for', nextDate.toDateString());
+    } else if (scheduleFrequency === 'monthly') {
+      // For monthly reports: find next occurrence of the specified day of month
+      const targetDayOfMonth = scheduleDay ?? 1; // Default to 1st if not specified
+
+      // If we're past the target day this month, or it's today but time has passed, go to next month
+      if (targetDay > targetDayOfMonth || (targetDay === targetDayOfMonth && timeHasPassedToday)) {
+        targetMonth += 1;
+        if (targetMonth > 12) {
+          targetMonth = 1;
+          targetYear += 1;
+        }
+      }
+
+      targetDay = targetDayOfMonth;
+
+      // Handle months with fewer than targetDayOfMonth days (e.g., Feb 30)
+      const daysInMonth = new Date(targetYear, targetMonth, 0).getDate();
+      if (targetDay > daysInMonth) {
+        targetDay = daysInMonth;
+      }
+
+      console.log('🕐 Monthly: Scheduled for', `${targetMonth}/${targetDay}/${targetYear}`);
     }
 
-    // Create a date string in Eastern time and convert to UTC
-    // Format: YYYY-MM-DDTHH:mm:ss for ISO parsing
-    const easternDateStr = `${targetYear}-${targetMonth.toString().padStart(2, '0')}-${targetDay.toString().padStart(2, '0')}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
-    console.log('🕐 Target Eastern date string:', easternDateStr);
-
-    // Parse this string as if it's in Eastern timezone and get the UTC equivalent
-    // We'll use toLocaleString to create a date in Eastern time, then convert to UTC
-    const testDate = new Date(`${targetYear}-${targetMonth.toString().padStart(2, '0')}-${targetDay.toString().padStart(2, '0')}T12:00:00Z`);
+    // Determine if target date is in EDT or EST
+    const testDate = new Date(Date.UTC(targetYear, targetMonth - 1, targetDay, 12, 0, 0));
     const isEDT = isEasternDaylightTime(testDate);
     const offsetHours = isEDT ? 4 : 5; // EDT is UTC-4, EST is UTC-5
 
@@ -274,10 +327,9 @@ export const useReports = () => {
       0
     ));
 
-    console.log('🕐 calculateNextRunTime: Is EDT?', isEDT);
-    console.log('🕐 calculateNextRunTime: Offset hours:', offsetHours);
-    console.log('🕐 calculateNextRunTime: Final UTC time:', utcTime.toISOString());
-    console.log('🕐 calculateNextRunTime: Verification - UTC converted back to Eastern:', utcTime.toLocaleString('en-US', {timeZone: 'America/New_York'}));
+    console.log('🕐 Is EDT?', isEDT, '| Offset:', offsetHours, 'hours');
+    console.log('🕐 Final UTC time:', utcTime.toISOString());
+    console.log('🕐 Verification (Eastern):', utcTime.toLocaleString('en-US', {timeZone: 'America/New_York'}));
 
     return utcTime.toISOString();
   }, []);

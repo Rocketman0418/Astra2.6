@@ -2,6 +2,7 @@ import React from 'react';
 import { Menu, User, MessageSquare, Users, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { ChatMode } from '../types';
+import { NotificationBell } from './NotificationBell';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -63,6 +64,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right side - User info */}
         <div className="flex items-center space-x-2">
+          <NotificationBell />
           <div className="hidden sm:block text-right">
             <p className="text-white text-sm font-medium">
               {user?.user_metadata?.full_name || 'User'}

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Settings, FileText, Zap, Calendar } from 'lucide-react';
+import { Plus, Settings, FileText, Zap, Calendar, BarChart3 } from 'lucide-react';
 import { useReports } from '../../hooks/useReports';
 import { useVisualization } from '../../hooks/useVisualization';
 import { ReportCard } from './ReportCard';
 import { CreateReportModal } from './CreateReportModal';
 import { ManageReportsModal } from './ManageReportsModal';
 import { VisualizationView } from '../VisualizationView';
+import { useReports as useReportsNew } from '../../hooks/useReports';
+import { ManageReportsModal as ManageReportsModalNew } from '../ManageReportsModal';
 
 export const ReportsView: React.FC = () => {
   const {
@@ -32,8 +34,10 @@ export const ReportsView: React.FC = () => {
     setVisualizationContent
   } = useVisualization();
 
+  const { userReports } = useReportsNew();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showManageModal, setShowManageModal] = useState(false);
+  const [showNewManageModal, setShowNewManageModal] = useState(false);
   const [visualizationStates, setVisualizationStates] = useState<Record<string, any>>({});
 
   // Set up scheduler to check for reports every minute
@@ -178,6 +182,14 @@ export const ReportsView: React.FC = () => {
             </button>
             
             <button
+              onClick={() => setShowNewManageModal(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+            >
+              <BarChart3 className="w-4 h-4" />
+              <span>Manage Reports ({userReports.length} configured)</span>
+            </button>
+            
+            <button
               onClick={() => setShowCreateModal(true)}
               className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105"
             >
@@ -295,6 +307,11 @@ export const ReportsView: React.FC = () => {
         onUpdateReport={updateReport}
         onDeleteReport={deleteReport}
         onExecuteReport={executeReport}
+      />
+      
+      <ManageReportsModalNew
+        isOpen={showNewManageModal}
+        onClose={() => setShowNewManageModal(false)}
       />
     </div>
   );

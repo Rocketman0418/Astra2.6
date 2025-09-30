@@ -210,15 +210,6 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
           {/* List View */}
           {currentView === 'list' && (
             <div className="space-y-6">
-              {/* Create Button */}
-              <button
-                onClick={startCreate}
-                className="w-full flex items-center justify-center space-x-2 p-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium rounded-lg transition-all duration-200 transform hover:scale-105"
-              >
-                <Plus className="w-5 h-5" />
-                <span>Create New Report</span>
-              </button>
-
               {/* Reports List */}
               {userReports.length === 0 ? (
                 <div className="text-center py-8">

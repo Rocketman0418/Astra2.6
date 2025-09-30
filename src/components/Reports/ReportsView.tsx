@@ -3,7 +3,7 @@ import { Plus, Settings, FileText, Zap, Calendar, BarChart3 } from 'lucide-react
 import { useReports } from '../../hooks/useReports';
 import { useVisualization } from '../../hooks/useVisualization';
 import { ReportCard } from './ReportCard';
-import { CreateReportModal } from './CreateReportModal';
+import { CreateReportModal } from '../Reports/CreateReportModal';
 import { VisualizationView } from '../VisualizationView';
 import { ManageReportsModal } from '../ManageReportsModal';
 

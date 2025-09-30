@@ -24,7 +24,7 @@ export const HourOnlyTimePicker: React.FC<HourOnlyTimePickerProps> = ({
     
     return {
       value: `${hour24}:00`,
-      label: `${hour12}:00 ${ampm} (${hour24}:00)`,
+      label: `${hour12}:00 ${ampm}`,
       display: `${hour12}:00 ${ampm}`
     };
   });
@@ -48,10 +48,10 @@ export const HourOnlyTimePicker: React.FC<HourOnlyTimePickerProps> = ({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
-          className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none disabled:bg-gray-800 disabled:cursor-not-allowed"
+          className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none disabled:bg-gray-800 disabled:cursor-not-allowed appearance-none"
         >
           <option value="" disabled>
-            Select time
+            Select hour
           </option>
           {timeOptions.map((option) => (
             <option key={option.value} value={option.value}>
@@ -62,7 +62,7 @@ export const HourOnlyTimePicker: React.FC<HourOnlyTimePickerProps> = ({
       </div>
       
       <p className="text-xs text-gray-500">
-        Reports run on the hour (checks every 60 minutes)
+        Reports run once per hour at the selected time
       </p>
       
       {selectedOption && (

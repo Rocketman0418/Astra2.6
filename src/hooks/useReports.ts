@@ -338,6 +338,15 @@ export const useReports = () => {
         throw new Error('N8N webhook URL not configured');
       }
 
+      console.log('🚀 Running report manually:', {
+        reportId: id,
+        reportTitle: report.title,
+        reportPrompt: report.prompt,
+        webhookUrl: webhookUrl ? 'configured' : 'missing',
+        userId: user.id,
+        userEmail: user.email
+      });
+
       const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
@@ -358,18 +367,38 @@ export const useReports = () => {
         })
       });
 
+      console.log('📡 Webhook response:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
+      });
+
       if (!response.ok) {
-        throw new Error(`Failed to execute report: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('❌ Webhook failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorText
+        });
+        throw new Error(`Failed to execute report: ${response.status} ${response.statusText} - ${errorText}`);
       }
+
+      const responseText = await response.text();
+      console.log('✅ Webhook success:', {
+        responseLength: responseText.length,
+        responsePreview: responseText.substring(0, 200) + '...'
+      });
 
       // Wait a moment for the webhook to process and then refresh
       setTimeout(async () => {
+        console.log('🔄 Refreshing report messages after execution...');
         await fetchReportMessages();
+        console.log('✅ Report messages refreshed');
       }, 2000);
       
     } catch (err) {
       console.error('Error running report:', err);
-      setError('Failed to run report');
+      setError(`Failed to run report: ${err instanceof Error ? err.message : 'Unknown error'}`);
       throw err; // Re-throw so the modal can handle it
     } finally {
       setRunningReports(prev => {

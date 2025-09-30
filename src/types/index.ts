@@ -81,3 +81,46 @@ export interface ReportMessage extends Message {
     is_manual_run: boolean;
   };
 }
+
+export interface ReportTemplate {
+  id: string;
+  name: string;
+  description: string;
+  prompt_template: string;
+  icon: string;
+  default_schedule: string;
+  default_time: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface UserReport {
+  id: string;
+  user_id: string;
+  report_template_id: string | null;
+  title: string;
+  prompt: string;
+  schedule_type: 'manual' | 'scheduled';
+  schedule_frequency: string;
+  schedule_time: string;
+  is_active: boolean;
+  last_run_at: string | null;
+  next_run_at: string | null;
+  created_at: string;
+  updated_at: string;
+  template?: ReportTemplate;
+}
+
+export interface AppNotification {
+  id: string;
+  user_id: string;
+  type: 'report' | 'mention' | 'system';
+  title: string;
+  message: string;
+  related_chat_id: string | null;
+  related_report_id: string | null;
+  is_read: boolean;
+  read_at: string | null;
+  action_url: string | null;
+  created_at: string;
+}

@@ -1,148 +1,263 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { useChats } from './useChats';
-import { ReportConfig, ReportMessage } from '../types';
 
-const REPORTS_STORAGE_KEY = 'astra-report-configs';
+export interface ReportTemplate {
+  id: string;
+  name: string;
+  description: string;
+  prompt_template: string;
+  icon: string;
+  default_schedule: string;
+  default_time: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface UserReport {
+  id: string;
+  user_id: string;
+  report_template_id: string | null;
+  title: string;
+  prompt: string;
+  schedule_type: 'manual' | 'scheduled';
+  schedule_frequency: string;
+  schedule_time: string;
+  is_active: boolean;
+  last_run_at: string | null;
+  next_run_at: string | null;
+  created_at: string;
+  updated_at: string;
+  template?: ReportTemplate;
+}
+
+export interface ReportExecution {
+  id: string;
+  user_id: string;
+  user_email: string;
+  message: string;
+  metadata: {
+    report_title?: string;
+    report_schedule?: string;
+    report_frequency?: string;
+    is_manual_run?: boolean;
+    executed_at?: string;
+  };
+  created_at: string;
+}
+
+const WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL;
 
 export const useReports = () => {
   const { user } = useAuth();
-  const { logChatMessage } = useChats();
-  const [reportMessages, setReportMessages] = useState<ReportMessage[]>([]);
-  const [reportConfigs, setReportConfigs] = useState<ReportConfig[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [templates, setTemplates] = useState<ReportTemplate[]>([]);
+  const [userReports, setUserReports] = useState<UserReport[]>([]);
+  const [reportHistory, setReportHistory] = useState<ReportExecution[]>([]);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [runningReports, setRunningReports] = useState<Set<string>>(new Set());
 
-  // Load report configurations from localStorage
-  const loadReportConfigs = useCallback(() => {
-    try {
-      const stored = localStorage.getItem(REPORTS_STORAGE_KEY);
-      if (stored) {
-        const configs = JSON.parse(stored);
-        setReportConfigs(configs);
-      }
-    } catch (error) {
-      console.error('Error loading report configs:', error);
-    }
-  }, []);
-
-  // Save report configurations to localStorage
-  const saveReportConfigs = useCallback((configs: ReportConfig[]) => {
-    try {
-      localStorage.setItem(REPORTS_STORAGE_KEY, JSON.stringify(configs));
-      setReportConfigs(configs);
-    } catch (error) {
-      console.error('Error saving report configs:', error);
-    }
-  }, []);
-
-  // Load report messages from database
-  const loadReportMessages = useCallback(async () => {
-    if (!user) return;
-
-    setIsLoading(true);
+  // Fetch report templates
+  const fetchTemplates = useCallback(async () => {
     try {
       const { data, error } = await supabase
-        .from('astra_chats')
+        .from('astra_report_templates')
         .select('*')
-        .eq('mode', 'reports')
+        .eq('is_active', true)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      setTemplates(data || []);
+    } catch (err) {
+      console.error('Error fetching templates:', err);
+      setError('Failed to load report templates');
+    }
+  }, []);
+
+  // Fetch user's report configurations
+  const fetchUserReports = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('astra_reports')
+        .select(`
+          *,
+          template:astra_report_templates(*)
+        `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error loading report messages:', error);
-        setError('Failed to load reports');
-        return;
-      }
-
-      const messages: ReportMessage[] = data.map(dbMessage => ({
-        id: dbMessage.id,
-        text: dbMessage.message,
-        isUser: dbMessage.message_type === 'user',
-        timestamp: new Date(dbMessage.created_at),
-        messageType: dbMessage.message_type as 'user' | 'astra' | 'system',
-        metadata: dbMessage.metadata || {},
-        visualization: dbMessage.visualization,
-        visualization_data: dbMessage.visualization_data,
-        hasStoredVisualization: !!dbMessage.visualization_data,
-        chatId: dbMessage.id,
-        reportMetadata: dbMessage.metadata || {}
-      }));
-
-      setReportMessages(messages);
+      if (error) throw error;
+      setUserReports(data || []);
     } catch (err) {
-      console.error('Error in loadReportMessages:', err);
-      setError('Failed to load reports');
-    } finally {
-      setIsLoading(false);
+      console.error('Error fetching user reports:', err);
+      setError('Failed to load your reports');
     }
   }, [user]);
 
-  // Calculate next execution time
-  const calculateNextExecution = useCallback((config: ReportConfig): Date => {
-    const now = new Date();
-    const [hours, minutes] = config.schedule_time.split(':').map(Number);
-    
-    let nextExecution = new Date();
-    nextExecution.setHours(hours, minutes, 0, 0);
-
-    switch (config.frequency) {
-      case 'daily':
-        if (nextExecution <= now) {
-          nextExecution.setDate(nextExecution.getDate() + 1);
-        }
-        break;
-      case 'weekly':
-        if (nextExecution <= now) {
-          nextExecution.setDate(nextExecution.getDate() + 7);
-        }
-        break;
-      case 'monthly':
-        if (nextExecution <= now) {
-          nextExecution.setMonth(nextExecution.getMonth() + 1);
-        }
-        break;
-    }
-
-    return nextExecution;
-  }, []);
-
-  // Execute a report
-  const executeReport = useCallback(async (config: ReportConfig, isManualRun = false) => {
+  // Fetch report execution history
+  const fetchReportHistory = useCallback(async () => {
     if (!user) return;
 
-    // Prevent multiple executions of the same report
-    if (runningReports.has(config.id)) {
-      console.log('Report already running:', config.title);
-      return;
+    try {
+      const { data, error } = await supabase
+        .from('astra_chats')
+        .select('id, user_id, user_email, message, metadata, created_at')
+        .eq('user_id', user.id)
+        .eq('mode', 'reports')
+        .eq('message_type', 'astra')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      setReportHistory(data || []);
+    } catch (err) {
+      console.error('Error fetching report history:', err);
+      setError('Failed to load report history');
+    }
+  }, [user]);
+
+  // Create new report
+  const createReport = useCallback(async (reportData: {
+    title: string;
+    prompt: string;
+    schedule_type: 'manual' | 'scheduled';
+    schedule_frequency?: string;
+    schedule_time?: string;
+    report_template_id?: string;
+  }): Promise<UserReport | null> => {
+    if (!user) return null;
+
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase
+        .from('astra_reports')
+        .insert({
+          user_id: user.id,
+          title: reportData.title,
+          prompt: reportData.prompt,
+          schedule_type: reportData.schedule_type,
+          schedule_frequency: reportData.schedule_frequency || 'daily',
+          schedule_time: reportData.schedule_time || '07:00',
+          report_template_id: reportData.report_template_id || null,
+          is_active: true
+        })
+        .select(`
+          *,
+          template:astra_report_templates(*)
+        `)
+        .single();
+
+      if (error) throw error;
+      
+      // Refresh user reports
+      await fetchUserReports();
+      
+      return data;
+    } catch (err) {
+      console.error('Error creating report:', err);
+      setError('Failed to create report');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [user, fetchUserReports]);
+
+  // Update report
+  const updateReport = useCallback(async (
+    reportId: string, 
+    updates: Partial<UserReport>
+  ): Promise<UserReport | null> => {
+    if (!user) return null;
+
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase
+        .from('astra_reports')
+        .update(updates)
+        .eq('id', reportId)
+        .eq('user_id', user.id)
+        .select(`
+          *,
+          template:astra_report_templates(*)
+        `)
+        .single();
+
+      if (error) throw error;
+      
+      // Refresh user reports
+      await fetchUserReports();
+      
+      return data;
+    } catch (err) {
+      console.error('Error updating report:', err);
+      setError('Failed to update report');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [user, fetchUserReports]);
+
+  // Delete report
+  const deleteReport = useCallback(async (reportId: string): Promise<boolean> => {
+    if (!user) return false;
+
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase
+        .from('astra_reports')
+        .delete()
+        .eq('id', reportId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      
+      // Refresh user reports
+      await fetchUserReports();
+      
+      return true;
+    } catch (err) {
+      console.error('Error deleting report:', err);
+      setError('Failed to delete report');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [user, fetchUserReports]);
+
+  // Toggle report active status
+  const toggleReportActive = useCallback(async (
+    reportId: string, 
+    isActive: boolean
+  ): Promise<boolean> => {
+    return (await updateReport(reportId, { is_active: isActive })) !== null;
+  }, [updateReport]);
+
+  // Run report manually
+  const runReportNow = useCallback(async (reportId: string): Promise<boolean> => {
+    if (!user || !WEBHOOK_URL) {
+      setError('Webhook URL not configured');
+      return false;
     }
 
-    // Mark report as running
-    setRunningReports(prev => new Set(prev).add(config.id));
+    const report = userReports.find(r => r.id === reportId);
+    if (!report) {
+      setError('Report not found');
+      return false;
+    }
 
-    const WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL;
-    if (!WEBHOOK_URL) {
-      setError('N8N webhook URL not configured');
-      setRunningReports(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(config.id);
-        return newSet;
-      });
-      return;
+    // Prevent multiple runs of the same report
+    if (runningReports.has(reportId)) {
+      return false;
     }
 
     try {
-      const reportMetadata = {
-        report_type: "scheduled",
-        report_title: config.title,
-        report_frequency: config.frequency,
-        report_schedule: config.schedule_time,
-        executed_at: new Date().toISOString(),
-        is_manual_run: isManualRun
-      };
-
+      setRunningReports(prev => new Set(prev).add(reportId));
+      
       // Get user profile for name
       const { data: userProfile } = await supabase
         .from('users')
@@ -152,35 +267,22 @@ export const useReports = () => {
 
       const userName = userProfile?.name || user.email?.split('@')[0] || 'Unknown User';
 
-      // Log user message (the report prompt)
-      await logChatMessage(
-        config.prompt,
-        true, // isUser
-        null, // No conversation ID for reports
-        0, // No response time for user messages
-        {},
-        undefined,
-        reportMetadata,
-        false, // visualization
-        'reports', // mode
-        [], // mentions
-        config.prompt, // astraPrompt
-        undefined // visualizationData
-      );
-
-      // Send to N8N webhook (same format as private chat)
+      // Call N8N webhook
       const response = await fetch(WEBHOOK_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          chatInput: config.prompt,
+          chatInput: report.prompt,
           user_id: user.id,
           user_email: user.email || '',
           user_name: userName,
           conversation_id: null,
-          mode: 'reports'
+          mode: 'reports',
+          report_id: reportId,
+          report_title: report.title,
+          is_manual_run: true
         })
       });
 
@@ -188,168 +290,91 @@ export const useReports = () => {
         throw new Error(`Webhook request failed: ${response.status}`);
       }
 
-      const responseText = await response.text();
-      let messageText = responseText;
+      // Refresh report history after a short delay
+      setTimeout(() => {
+        fetchReportHistory();
+      }, 2000);
 
-      // Try to parse JSON response
-      try {
-        const jsonResponse = JSON.parse(responseText);
-        if (jsonResponse.output) {
-          messageText = jsonResponse.output;
-        }
-      } catch (e) {
-        // Use raw text if not JSON
-      }
-
-      // Log Astra response
-      await logChatMessage(
-        messageText,
-        false, // isUser (Astra response)
-        null, // No conversation ID for reports
-        0, // Response time
-        {}, // Tokens used
-        'n8n-workflow', // Model used
-        reportMetadata,
-        false, // visualization
-        'reports', // mode
-        [], // mentions
-        config.prompt, // astraPrompt
-        undefined // visualizationData
-      );
-
-      // Update configuration after execution
-      if (!isManualRun) {
-        const updatedConfigs = reportConfigs.map(c => 
-          c.id === config.id 
-            ? {
-                ...c,
-                last_executed: new Date().toISOString(),
-                next_execution: calculateNextExecution(c).toISOString()
-              }
-            : c
-        );
-        saveReportConfigs(updatedConfigs);
-      }
-
-      // Refresh report messages
-      setTimeout(() => loadReportMessages(), 2000);
-
-      console.log('✅ Report execution completed:', config.title);
-    } catch (error) {
-      console.error('Error executing report:', error);
-      setError(`Failed to execute report: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return true;
+    } catch (err) {
+      console.error('Error running report:', err);
+      setError(`Failed to run report: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      return false;
     } finally {
-      // Remove from running reports
       setRunningReports(prev => {
         const newSet = new Set(prev);
-        newSet.delete(config.id);
+        newSet.delete(reportId);
         return newSet;
       });
     }
-  }, [user, logChatMessage, reportConfigs, saveReportConfigs, calculateNextExecution, loadReportMessages]);
+  }, [user, userReports, runningReports, fetchReportHistory]);
 
-  // Create a new report
-  const createReport = useCallback((reportData: Omit<ReportConfig, 'id' | 'created_at' | 'next_execution'>) => {
-    const newReport: ReportConfig = {
-      ...reportData,
-      id: Date.now().toString(),
-      created_at: new Date().toISOString(),
-      next_execution: calculateNextExecution(reportData as ReportConfig).toISOString()
-    };
-
-    const updatedConfigs = [...reportConfigs, newReport];
-    saveReportConfigs(updatedConfigs);
-  }, [reportConfigs, saveReportConfigs, calculateNextExecution]);
-
-  // Update a report
-  const updateReport = useCallback((reportId: string, updates: Partial<ReportConfig>) => {
-    const updatedConfigs = reportConfigs.map(config => 
-      config.id === reportId 
-        ? { 
-            ...config, 
-            ...updates,
-            next_execution: updates.schedule_time || updates.frequency 
-              ? calculateNextExecution({ ...config, ...updates } as ReportConfig).toISOString()
-              : config.next_execution
-          }
-        : config
-    );
-    saveReportConfigs(updatedConfigs);
-  }, [reportConfigs, saveReportConfigs, calculateNextExecution]);
-
-  // Delete a report
-  const deleteReport = useCallback((reportId: string) => {
-    const updatedConfigs = reportConfigs.filter(config => config.id !== reportId);
-    saveReportConfigs(updatedConfigs);
-  }, [reportConfigs, saveReportConfigs]);
-
-  // Delete a specific report message instance
-  const deleteReportMessage = useCallback(async (messageId: string) => {
+  // Set up real-time subscriptions
+  useEffect(() => {
     if (!user) return;
 
-    try {
-      const { error } = await supabase
-        .from('astra_chats')
-        .delete()
-        .eq('id', messageId)
-        .eq('user_id', user.id)
-        .eq('mode', 'reports');
+    // Subscribe to user's reports
+    const reportsChannel = supabase
+      .channel('user_reports')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'astra_reports',
+        filter: `user_id=eq.${user.id}`
+      }, () => {
+        fetchUserReports();
+      })
+      .subscribe();
 
-      if (error) {
-        console.error('Error deleting report message:', error);
-        throw new Error('Failed to delete report message');
-      }
+    // Subscribe to report executions
+    const historyChannel = supabase
+      .channel('report_history')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'astra_chats',
+        filter: `user_id=eq.${user.id}`
+      }, (payload) => {
+        const newChat = payload.new as any;
+        if (newChat.mode === 'reports' && newChat.message_type === 'astra') {
+          fetchReportHistory();
+        }
+      })
+      .subscribe();
 
-      // Remove from local state
-      setReportMessages(prev => prev.filter(msg => msg.id !== messageId));
-      
-      console.log('✅ Deleted report message:', messageId);
-    } catch (err) {
-      console.error('Error in deleteReportMessage:', err);
-      throw err;
-    }
-  }, [user]);
+    return () => {
+      supabase.removeChannel(reportsChannel);
+      supabase.removeChannel(historyChannel);
+    };
+  }, [user, fetchUserReports, fetchReportHistory]);
 
-  // Check for scheduled reports (called by scheduler)
-  const checkScheduledReports = useCallback(() => {
-    const now = new Date();
-    
-    reportConfigs.forEach(config => {
-      if (!config.enabled) return;
-      
-      const nextExecution = new Date(config.next_execution || 0);
-      if (now >= nextExecution) {
-        console.log('Executing scheduled report:', config.title);
-        executeReport(config, false);
-      }
-    });
-  }, [reportConfigs, executeReport]);
-
-  // Load configurations on mount
+  // Load initial data
   useEffect(() => {
-    loadReportConfigs();
-  }, [loadReportConfigs]);
-
-  // Load messages when user changes
-  useEffect(() => {
+    fetchTemplates();
     if (user) {
-      loadReportMessages();
+      fetchUserReports();
+      fetchReportHistory();
     }
-  }, [user, loadReportMessages]);
+  }, [user, fetchTemplates, fetchUserReports, fetchReportHistory]);
 
   return {
-    reportMessages,
-    reportConfigs,
-    isLoading,
+    // Data
+    templates,
+    userReports,
+    reportHistory,
+    loading,
     error,
     runningReports,
-    loadReportMessages,
-    executeReport,
+
+    // Actions
+    fetchTemplates,
+    fetchUserReports,
+    fetchReportHistory,
     createReport,
     updateReport,
     deleteReport,
-    checkScheduledReports,
-    setError,
-    deleteReportMessage
+    toggleReportActive,
+    runReportNow,
+    setError
   };
 };

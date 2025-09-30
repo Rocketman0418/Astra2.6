@@ -173,7 +173,7 @@ Return only the HTML code - no other text or formatting.`;
 
       console.log('✅ Visualization generated successfully');
 
-      // Save visualization to database - preserve existing metadata
+      // Save visualization to database - preserve existing metadata and clear generating flag
       try {
         const { data: existingMessage } = await supabase
           .from('astra_chats')
@@ -183,12 +183,19 @@ Return only the HTML code - no other text or formatting.`;
 
         const existingMetadata = existingMessage?.metadata || {};
 
+        // Remove visualization_generating and add visualization_error if it exists
+        const updatedMetadata = { ...existingMetadata };
+        delete updatedMetadata.visualization_generating;
+        if (updatedMetadata.visualization_error) {
+          delete updatedMetadata.visualization_error;
+        }
+
         const { error: updateError } = await supabase
           .from('astra_chats')
           .update({
             visualization_data: cleanedContent,
             visualization: true,
-            metadata: { ...existingMetadata, visualization_generating: false }
+            metadata: updatedMetadata
           })
           .eq('id', messageId);
 
@@ -260,10 +267,15 @@ Return only the HTML code - no other text or formatting.`;
 
         const existingMetadata = existingMessage?.metadata || {};
 
+        // Remove generating flag and add error
+        const updatedMetadata = { ...existingMetadata };
+        delete updatedMetadata.visualization_generating;
+        updatedMetadata.visualization_error = errorMessage;
+
         await supabase
           .from('astra_chats')
           .update({
-            metadata: { ...existingMetadata, visualization_generating: false, visualization_error: errorMessage }
+            metadata: updatedMetadata
           })
           .eq('id', messageId);
       } catch (dbError) {

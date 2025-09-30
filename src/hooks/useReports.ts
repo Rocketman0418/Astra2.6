@@ -193,14 +193,71 @@ export const useReports = () => {
 
   // Helper function to calculate next run time
   const calculateNextRunTime = useCallback((scheduleTime: string): string => {
+    console.log('🕐 calculateNextRunTime: Input scheduleTime:', scheduleTime);
+    
     const [hours, minutes] = scheduleTime.split(':').map(Number);
+    console.log('🕐 calculateNextRunTime: Parsed hours:', hours, 'minutes:', minutes);
     
     // Get current time in Eastern timezone
     const now = new Date();
-    const easternNow = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
+    console.log('🕐 calculateNextRunTime: Current UTC time:', now.toISOString());
     
-    // Create next run time in Eastern timezone
-    const nextRun = new Date(easternNow);
+    // Create a date object for today at the scheduled time in Eastern timezone
+    const today = new Date();
+    const nextRun = new Date(today.getFullYear(), today.getMonth(), today.getDate(), hours, minutes, 0, 0);
+    console.log('🕐 calculateNextRunTime: Next run in local time:', nextRun.toLocaleString());
+    
+    // Convert to Eastern timezone by creating a new date with the Eastern time
+    const easternOffset = -5; // EST is UTC-5, EDT is UTC-4, but we'll handle this properly
+    const easternTime = new Date(nextRun.getTime());
+    
+    // Check if we need to schedule for tomorrow
+    const nowInEastern = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
+    console.log('🕐 calculateNextRunTime: Current Eastern time:', nowInEastern.toLocaleString());
+    
+    // Create the scheduled time for today in Eastern timezone
+    const todayEastern = new Date(nowInEastern.getFullYear(), nowInEastern.getMonth(), nowInEastern.getDate(), hours, minutes, 0, 0);
+    console.log('🕐 calculateNextRunTime: Today scheduled time (local):', todayEastern.toLocaleString());
+    
+    // If the scheduled time has already passed today, schedule for tomorrow
+    if (todayEastern <= nowInEastern) {
+      todayEastern.setDate(todayEastern.getDate() + 1);
+      console.log('🕐 calculateNextRunTime: Scheduled for tomorrow:', todayEastern.toLocaleString());
+    }
+    
+    // Now we need to convert this Eastern time to UTC for database storage
+    // Create a date string in Eastern timezone format and parse it as UTC
+    const easternDateStr = todayEastern.toLocaleString('sv-SE', {timeZone: 'America/New_York'});
+    const utcTime = new Date(easternDateStr + 'Z'); // Add Z to treat as UTC
+    
+    // Adjust for timezone offset (Eastern is UTC-5 in winter, UTC-4 in summer)
+    const isEDT = isEasternDaylightTime(todayEastern);
+    const offsetHours = isEDT ? 4 : 5; // EDT is UTC-4, EST is UTC-5
+    const finalUtcTime = new Date(todayEastern.getTime() + (offsetHours * 60 * 60 * 1000));
+    
+    console.log('🕐 calculateNextRunTime: Is EDT?', isEDT);
+    console.log('🕐 calculateNextRunTime: Offset hours:', offsetHours);
+    console.log('🕐 calculateNextRunTime: Final UTC time:', finalUtcTime.toISOString());
+    console.log('🕐 calculateNextRunTime: Final Eastern time:', finalUtcTime.toLocaleString('en-US', {timeZone: 'America/New_York'}));
+    
+    return finalUtcTime.toISOString();
+  }, []);
+  
+  // Helper function to determine if a date is in Eastern Daylight Time
+  const isEasternDaylightTime = useCallback((date: Date): boolean => {
+    // EDT runs from second Sunday in March to first Sunday in November
+    const year = date.getFullYear();
+    
+    // Second Sunday in March
+    const marchSecondSunday = new Date(year, 2, 1); // March 1st
+    marchSecondSunday.setDate(1 + (7 - marchSecondSunday.getDay()) + 7); // Second Sunday
+    
+    // First Sunday in November  
+    const novemberFirstSunday = new Date(year, 10, 1); // November 1st
+    novemberFirstSunday.setDate(1 + (7 - novemberFirstSunday.getDay()) % 7); // First Sunday
+    
+    return date >= marchSecondSunday && date < novemberFirstSunday;
+  }, []);
     nextRun.setHours(hours, minutes, 0, 0);
     
     // If the time has already passed today, schedule for tomorrow

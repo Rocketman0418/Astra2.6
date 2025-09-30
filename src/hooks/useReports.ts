@@ -649,13 +649,25 @@ export const useReports = () => {
             console.log('📡 Realtime report change:', payload);
 
             if (payload.eventType === 'INSERT') {
-              // Add new report to the list
-              fetchUserReports();
+              // Use setUserReports with callback to check current state
+              setUserReports(prev => {
+                const reportExists = prev.some(r => r.id === payload.new.id);
+                if (reportExists) {
+                  console.log('📡 Report already in list from optimistic update');
+                  return prev; // No change needed
+                } else {
+                  console.log('📡 New report detected, triggering fetch...');
+                  // Trigger a fetch in the next tick
+                  setTimeout(() => fetchUserReports(), 0);
+                  return prev;
+                }
+              });
             } else if (payload.eventType === 'UPDATE') {
-              // Update existing report
+              console.log('📡 Report updated, refreshing list...');
               fetchUserReports();
             } else if (payload.eventType === 'DELETE') {
               // Remove deleted report
+              console.log('📡 Report deleted, removing from list...');
               setUserReports(prev => prev.filter(r => r.id !== payload.old.id));
             }
           }

@@ -32,6 +32,7 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
   const [createStep, setCreateStep] = useState<CreateStep>('template');
   const [editingReport, setEditingReport] = useState<UserReport | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<ReportTemplate | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     prompt: '',
@@ -120,6 +121,8 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
       return;
     }
 
+    setIsSubmitting(true);
+
     const reportData = {
       title: formData.title,
       prompt: formData.prompt,
@@ -131,13 +134,22 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
       is_active: true
     };
 
-    if (editingReport) {
-      await updateReport(editingReport.id, reportData);
-    } else {
-      await createReport(reportData);
-    }
+    try {
+      if (editingReport) {
+        await updateReport(editingReport.id, reportData);
+      } else {
+        await createReport(reportData);
+      }
 
-    handleClose();
+      // Brief delay to ensure state updates propagate
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      setIsSubmitting(false);
+      handleClose();
+    } catch (error) {
+      console.error('Error submitting report:', error);
+      setIsSubmitting(false);
+    }
   };
 
   // Handle delete with confirmation
@@ -558,16 +570,27 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
                   <div className="flex justify-end space-x-3 pt-4">
                     <button
                       onClick={handleClose}
-                      className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+                      disabled={isSubmitting}
+                      className="px-4 py-2 text-gray-400 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={handleSubmit}
-                      disabled={!formData.title.trim() || !formData.prompt.trim() || loading}
-                      className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium rounded-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                      disabled={!formData.title.trim() || !formData.prompt.trim() || loading || isSubmitting}
+                      className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium rounded-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center space-x-2"
                     >
-                      {editingReport ? 'Update Report' : 'Create Report'}
+                      {isSubmitting ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          <span>{editingReport ? 'Updating...' : 'Creating...'}</span>
+                        </>
+                      ) : (
+                        <span>{editingReport ? 'Update Report' : 'Create Report'}</span>
+                      )}
                     </button>
                   </div>
                 </div>

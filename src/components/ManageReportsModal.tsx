@@ -24,7 +24,8 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
     updateReport, 
     deleteReport, 
     toggleReportActive, 
-    runReportNow 
+    runReportNow,
+    runningReports
   } = useReports();
 
   const [currentView, setCurrentView] = useState<ModalView>('list');
@@ -264,12 +265,16 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
                         
                         <div className="flex items-center space-x-2 ml-4">
                           <button
-                            onClick={() => runReportNow(report.id)}
-                            disabled={loading}
-                            className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
+                            onClick={() => !runningReports.has(report.id) && runReportNow(report.id)}
+                            disabled={runningReports.has(report.id)}
+                            className={`p-2 rounded-lg transition-colors text-white disabled:opacity-50 ${
+                              runningReports.has(report.id)
+                                ? 'bg-purple-600 cursor-not-allowed animate-pulse'
+                                : 'bg-blue-600 hover:bg-blue-700'
+                            }`}
                             title="Run now"
                           >
-                            <Play className="w-4 h-4" />
+                            <Play className={`w-4 h-4 ${runningReports.has(report.id) ? 'animate-spin' : ''}`} />
                           </button>
                           
                           <button

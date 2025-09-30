@@ -108,9 +108,9 @@ export const useReports = () => {
       if (reportData.schedule_type === 'scheduled') {
         const { data: nextRun, error: calcError } = await supabase
           .rpc('calculate_next_run_time', {
-            schedule_frequency: reportData.schedule_frequency,
-            schedule_time: reportData.schedule_time,
-            current_time: new Date().toISOString()
+            p_schedule_frequency: reportData.schedule_frequency,
+            p_schedule_time: reportData.schedule_time,
+            p_current_time: new Date().toISOString()
           });
 
         if (calcError) {
@@ -166,9 +166,9 @@ export const useReports = () => {
         if (currentReport) {
           const { data: nextRun, error: calcError } = await supabase
             .rpc('calculate_next_run_time', {
-              schedule_frequency: updates.schedule_frequency || currentReport.schedule_frequency,
-              schedule_time: updates.schedule_time || currentReport.schedule_time,
-              current_time: new Date().toISOString()
+              p_schedule_frequency: updates.schedule_frequency || currentReport.schedule_frequency,
+              p_schedule_time: updates.schedule_time || currentReport.schedule_time,
+              p_current_time: new Date().toISOString()
             });
 
           if (calcError) {
@@ -324,117 +324,4 @@ export const useReports = () => {
   const runReportNow = useCallback(async (id: string): Promise<void> => {
     if (!user) return;
 
-    const report = userReports.find(r => r.id === id);
-    if (!report) {
-      setError('Report not found');
-      return;
-    }
-
-    const webhookUrl = import.meta.env.VITE_N8N_WEBHOOK_URL;
-    if (!webhookUrl) {
-      setError('N8N webhook URL not configured');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setRunningReports(prev => new Set(prev).add(id));
-
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chatInput: report.prompt,
-          user_id: user.id,
-          user_email: user.email || '',
-          user_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-          mode: 'reports',
-          metadata: {
-            report_title: report.title,
-            report_schedule: report.schedule_time,
-            report_frequency: report.schedule_frequency,
-            is_manual_run: true,
-            executed_at: new Date().toISOString()
-          }
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Webhook request failed: ${response.status}`);
-      }
-
-      // Update last run time
-      await updateReport(id, { last_run_at: new Date().toISOString() });
-
-      // Refresh report messages after execution
-      setTimeout(() => {
-        fetchReportMessages();
-      }, 2000); // Give some time for the report to be processed
-
-      console.log('✅ Report executed manually:', report.title);
-    } catch (err) {
-      console.error('Error running report:', err);
-      setError('Failed to run report');
-    } finally {
-      setLoading(false);
-      setRunningReports(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(id);
-        return newSet;
-      });
-    }
-  }, [user, userReports, updateReport, fetchReportMessages]);
-
-  // Set up real-time subscription for user reports
-  useEffect(() => {
-    if (!user) return;
-
-    const channel = supabase
-      .channel('astra_reports_changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'astra_reports',
-        filter: `user_id=eq.${user.id}`
-      }, () => {
-        // Refresh reports when changes occur
-        fetchUserReports();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, fetchUserReports]);
-
-  // Load data on mount
-  useEffect(() => {
-    fetchTemplates();
-    if (user) {
-      fetchUserReports();
-      fetchReportMessages();
-    }
-  }, [user, fetchTemplates, fetchUserReports, fetchReportMessages]);
-
-  return {
-    templates,
-    userReports,
-    reportMessages,
-    runningReports,
-    loading,
-    error,
-    fetchTemplates,
-    fetchUserReports,
-    fetchReportMessages,
-    createReport,
-    updateReport,
-    deleteReport,
-    toggleReportActive,
-    runReportNow,
-    checkScheduledReports,
-    deleteReportMessage,
-    setError
-  };
-};
+    const report = userReports.find(r

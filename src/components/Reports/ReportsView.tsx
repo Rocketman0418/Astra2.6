@@ -36,6 +36,32 @@ export const ReportsView: React.FC = () => {
   const [showManageModal, setShowManageModal] = useState(false);
   const [visualizationStates, setVisualizationStates] = useState<Record<string, any>>({});
 
+  // Initialize visualization states from database when messages load
+  useEffect(() => {
+    const newStates: Record<string, any> = {};
+
+    reportMessages.forEach(message => {
+      const messageId = message.chatId || message.id;
+      const metadata = message.reportMetadata || {};
+
+      // If visualization is generating according to database, set that state
+      if (metadata.visualization_generating) {
+        console.log('📊 ReportsView: Found generating visualization in DB for message:', messageId);
+        newStates[messageId] = {
+          isGenerating: true,
+          content: null,
+          hasVisualization: false
+        };
+      }
+    });
+
+    // Only update if we found generating visualizations
+    if (Object.keys(newStates).length > 0) {
+      console.log('📊 ReportsView: Initializing visualization states from DB:', newStates);
+      setVisualizationStates(prev => ({ ...prev, ...newStates }));
+    }
+  }, [reportMessages]);
+
   // Set up scheduler to check for reports every minute
   useEffect(() => {
     const interval = setInterval(() => {

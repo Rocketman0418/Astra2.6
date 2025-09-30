@@ -324,4 +324,83 @@ export const useReports = () => {
   const runReportNow = useCallback(async (id: string): Promise<void> => {
     if (!user) return;
 
-    const report = userReports.find(r
+    const report = userReports.find(r => r.id === id);
+    if (!report) {
+      setError('Report not found');
+      return;
+    }
+
+    try {
+      setRunningReports(prev => new Set([...prev, id]));
+      
+      const webhookUrl = import.meta.env.VITE_N8N_WEBHOOK_URL;
+      if (!webhookUrl) {
+        throw new Error('N8N webhook URL not configured');
+      }
+
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chatInput: report.prompt,
+          user_id: user.id,
+          user_email: user.email,
+          mode: 'reports',
+          metadata: {
+            report_title: report.title,
+            report_schedule: report.schedule_time,
+            report_frequency: report.schedule_frequency,
+            is_manual_run: true,
+            executed_at: new Date().toISOString()
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to execute report: ${response.statusText}`);
+      }
+
+      // Refresh report messages after execution
+      await fetchReportMessages();
+    } catch (err) {
+      console.error('Error running report:', err);
+      setError('Failed to run report');
+    } finally {
+      setRunningReports(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
+    }
+  }, [user, userReports, fetchReportMessages]);
+
+  // Initialize data on mount
+  useEffect(() => {
+    if (user) {
+      fetchTemplates();
+      fetchUserReports();
+      fetchReportMessages();
+    }
+  }, [user, fetchTemplates, fetchUserReports, fetchReportMessages]);
+
+  return {
+    templates,
+    userReports,
+    reportMessages,
+    runningReports,
+    loading,
+    error,
+    fetchTemplates,
+    fetchUserReports,
+    createReport,
+    updateReport,
+    deleteReport,
+    toggleReportActive,
+    runReportNow,
+    fetchReportMessages,
+    checkScheduledReports,
+    deleteReportMessage
+  };
+};

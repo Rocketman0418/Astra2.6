@@ -3,7 +3,7 @@ import { Header } from './Header';
 import { ChatSidebar } from './ChatSidebar';
 import { ChatContainer } from './ChatContainer';
 import { GroupChat } from './GroupChat';
-import { ReportsPage } from '../pages/ReportsPage';
+import { ReportsView } from './Reports/ReportsView';
 import { ChatModeToggle } from './ChatModeToggle';
 import { ChatMode } from '../types';
 
@@ -88,7 +88,7 @@ export const MainContainer: React.FC = () => {
         {/* Chat Content */}
         <div className="flex-1 overflow-hidden">
           {chatMode === 'reports' ? (
-            <ReportsPage />
+            <ReportsView />
           ) : chatMode === 'private' ? (
             <ChatContainer 
               sidebarOpen={sidebarOpen}

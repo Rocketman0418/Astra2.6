@@ -135,9 +135,6 @@ export const useReports = () => {
       // Update local state immediately for instant UI feedback
       setUserReports(prev => [data, ...prev]);
 
-      // Also refresh to ensure consistency
-      await fetchUserReports();
-
       return data;
     } catch (err) {
       console.error('Error in createReport:', err);
@@ -191,9 +188,6 @@ export const useReports = () => {
 
       // Update local state immediately for instant UI feedback
       setUserReports(prev => prev.map(report => report.id === id ? data : report));
-
-      // Also refresh to ensure consistency
-      await fetchUserReports();
 
       return data;
     } catch (err) {
@@ -369,8 +363,8 @@ export const useReports = () => {
         return;
       }
 
-      // Refresh user reports
-      await fetchUserReports();
+      // Update local state immediately for instant UI feedback
+      setUserReports(prev => prev.filter(report => report.id !== id));
     } catch (err) {
       console.error('Error in deleteReport:', err);
       setError('Failed to delete report');
@@ -633,12 +627,45 @@ export const useReports = () => {
     }
   }, [user, userReports, fetchReportMessages, calculateNextRunTime, fetchUserReports]);
 
-  // Initialize data on mount
+  // Initialize data on mount and set up realtime subscription
   useEffect(() => {
     if (user) {
       fetchTemplates();
       fetchUserReports();
       fetchReportMessages();
+
+      // Set up realtime subscription for user's reports
+      const reportsChannel = supabase
+        .channel('user-reports')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'astra_reports',
+            filter: `user_id=eq.${user.id}`
+          },
+          (payload) => {
+            console.log('📡 Realtime report change:', payload);
+
+            if (payload.eventType === 'INSERT') {
+              // Add new report to the list
+              fetchUserReports();
+            } else if (payload.eventType === 'UPDATE') {
+              // Update existing report
+              fetchUserReports();
+            } else if (payload.eventType === 'DELETE') {
+              // Remove deleted report
+              setUserReports(prev => prev.filter(r => r.id !== payload.old.id));
+            }
+          }
+        )
+        .subscribe();
+
+      // Cleanup subscription on unmount
+      return () => {
+        supabase.removeChannel(reportsChannel);
+      };
     }
   }, [user, fetchTemplates, fetchUserReports, fetchReportMessages]);
 

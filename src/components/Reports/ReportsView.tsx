@@ -6,6 +6,7 @@ import { ReportCard } from './ReportCard';
 import { CreateReportModal } from '../Reports/CreateReportModal';
 import { VisualizationView } from '../VisualizationView';
 import { ManageReportsModal } from '../ManageReportsModal';
+import { supabase } from '../../lib/supabase';
 
 export const ReportsView: React.FC = () => {
   const {
@@ -93,8 +94,8 @@ export const ReportsView: React.FC = () => {
 
   // Polling mechanism: Check for visualization completion every 3 seconds
   useEffect(() => {
-    const pollInterval = setInterval(() => {
-      reportMessages.forEach(message => {
+    const pollInterval = setInterval(async () => {
+      for (const message of reportMessages) {
         const messageId = message.chatId || message.id;
         const metadata = message.reportMetadata || {};
         const state = visualizationStates[messageId];
@@ -105,7 +106,23 @@ export const ReportsView: React.FC = () => {
 
           // Check if visualization_data exists - if so, the visualization is done
           if (message.visualization_data) {
-            console.log('✅ Polling: Found completed visualization, updating state');
+            console.log('✅ Polling: Found completed visualization, clearing database flag');
+
+            // Clear the visualization_generating flag in the database
+            try {
+              const { visualization_generating, visualization_error, ...cleanMetadata } = metadata;
+              await supabase
+                .from('astra_chats')
+                .update({
+                  metadata: cleanMetadata
+                })
+                .eq('id', messageId);
+              console.log('✅ Polling: Cleared visualization_generating flag in database');
+            } catch (error) {
+              console.error('❌ Polling: Error clearing flag:', error);
+            }
+
+            // Update local state
             setVisualizationStates(prev => ({
               ...prev,
               [messageId]: {
@@ -116,7 +133,7 @@ export const ReportsView: React.FC = () => {
             }));
           }
         }
-      });
+      }
     }, 3000); // Poll every 3 seconds
 
     return () => clearInterval(pollInterval);

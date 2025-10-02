@@ -91,6 +91,37 @@ export const ReportsView: React.FC = () => {
     return () => clearInterval(interval);
   }, [checkScheduledReports]);
 
+  // Polling mechanism: Check for visualization completion every 3 seconds
+  useEffect(() => {
+    const pollInterval = setInterval(() => {
+      reportMessages.forEach(message => {
+        const messageId = message.chatId || message.id;
+        const metadata = message.reportMetadata || {};
+        const state = visualizationStates[messageId];
+
+        // If we think it's generating, check if it actually completed in the database
+        if (state?.isGenerating || metadata.visualization_generating) {
+          console.log('🔄 Polling: Checking if visualization completed for message:', messageId);
+
+          // Check if visualization_data exists - if so, the visualization is done
+          if (message.visualization_data) {
+            console.log('✅ Polling: Found completed visualization, updating state');
+            setVisualizationStates(prev => ({
+              ...prev,
+              [messageId]: {
+                isGenerating: false,
+                content: message.visualization_data,
+                hasVisualization: true
+              }
+            }));
+          }
+        }
+      });
+    }, 3000); // Poll every 3 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [reportMessages, visualizationStates]);
+
   // Handle visualization creation
   const handleCreateVisualization = async (messageId: string, messageContent: string) => {
     console.log(`🎯 Reports: Starting visualization generation for messageId:`, messageId);

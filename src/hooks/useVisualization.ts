@@ -143,16 +143,23 @@ Return only the HTML code - no other text or formatting.`;
 
       // Save visualization to database - preserve existing metadata and clear generating flag
       try {
-        const { data: existingMessage } = await supabase
+        const { data: existingMessage, error: fetchError } = await supabase
           .from('astra_chats')
           .select('metadata')
           .eq('id', messageId)
           .maybeSingle();
 
+        if (fetchError) {
+          console.error('❌ Error fetching existing message:', fetchError);
+        }
+
         const existingMetadata = existingMessage?.metadata || {};
+        console.log('📊 Existing metadata before update:', JSON.stringify(existingMetadata));
 
         // Remove visualization_generating and visualization_error by creating a new object without them
         const { visualization_generating, visualization_error, ...updatedMetadata } = existingMetadata;
+        console.log('📊 Updated metadata after cleanup:', JSON.stringify(updatedMetadata));
+        console.log('📊 Removed flags:', { visualization_generating, visualization_error });
 
         const { error: updateError } = await supabase
           .from('astra_chats')
@@ -167,6 +174,15 @@ Return only the HTML code - no other text or formatting.`;
           console.error('❌ Error saving visualization to database:', updateError);
         } else {
           console.log('✅ Visualization saved to database for message:', messageId);
+
+          // Force a small delay then verify the update worked
+          await new Promise(resolve => setTimeout(resolve, 100));
+          const { data: verifyData } = await supabase
+            .from('astra_chats')
+            .select('metadata')
+            .eq('id', messageId)
+            .maybeSingle();
+          console.log('✅ Verified metadata after update:', JSON.stringify(verifyData?.metadata));
         }
       } catch (dbError) {
         console.error('❌ Database error while saving visualization:', dbError);

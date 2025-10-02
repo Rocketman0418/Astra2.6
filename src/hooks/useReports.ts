@@ -152,23 +152,46 @@ export const useReports = () => {
     try {
       setLoading(true);
 
+      // Fetch fresh report data from database to avoid stale state
+      const { data: freshReport } = await supabase
+        .from('astra_reports')
+        .select('*')
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .single();
+
       // Calculate next run time if schedule changed
       let nextRunAt = updates.next_run_at;
-      const currentReport = userReports.find(r => r.id === id);
 
-      console.log('🔍 updateReport called with:', { id, updates, currentReport: currentReport?.schedule_time });
+      console.log('🔍 updateReport called with:', {
+        id,
+        updates,
+        freshReport: freshReport?.schedule_time,
+        updateScheduleTime: updates.schedule_time
+      });
 
       // Recalculate next_run_at if this is a scheduled report and any schedule field changed
-      if (currentReport) {
-        const isScheduled = updates.schedule_type === 'scheduled' || currentReport.schedule_type === 'scheduled';
-        const scheduleChanged = updates.schedule_frequency || updates.schedule_time || updates.schedule_day !== undefined;
+      if (freshReport) {
+        const isScheduled = updates.schedule_type === 'scheduled' || freshReport.schedule_type === 'scheduled';
+        const scheduleTimeChanged = updates.schedule_time && updates.schedule_time !== freshReport.schedule_time;
+        const scheduleFreqChanged = updates.schedule_frequency && updates.schedule_frequency !== freshReport.schedule_frequency;
+        const scheduleDayChanged = updates.schedule_day !== undefined && updates.schedule_day !== freshReport.schedule_day;
+        const scheduleChanged = scheduleTimeChanged || scheduleFreqChanged || scheduleDayChanged;
 
-        console.log('🔍 Schedule check:', { isScheduled, scheduleChanged, updates });
+        console.log('🔍 Schedule check:', {
+          isScheduled,
+          scheduleChanged,
+          scheduleTimeChanged,
+          scheduleFreqChanged,
+          scheduleDayChanged,
+          old: freshReport.schedule_time,
+          new: updates.schedule_time
+        });
 
         if (isScheduled && scheduleChanged) {
-          const finalScheduleTime = updates.schedule_time || currentReport.schedule_time;
-          const finalFrequency = updates.schedule_frequency || currentReport.schedule_frequency;
-          const finalDay = updates.schedule_day !== undefined ? updates.schedule_day : currentReport.schedule_day;
+          const finalScheduleTime = updates.schedule_time || freshReport.schedule_time;
+          const finalFrequency = updates.schedule_frequency || freshReport.schedule_frequency;
+          const finalDay = updates.schedule_day !== undefined ? updates.schedule_day : freshReport.schedule_day;
 
           console.log('🔍 Calculating with:', { finalScheduleTime, finalFrequency, finalDay });
 

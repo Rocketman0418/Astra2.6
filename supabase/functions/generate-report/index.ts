@@ -59,6 +59,10 @@ Deno.serve(async (req: Request) => {
       throw new Error('Report not found or access denied');
     }
 
+    // Use the prompt from the database to ensure we have the latest version
+    const latestPrompt = report.prompt;
+    console.log('📊 Using prompt from database:', latestPrompt.substring(0, 100) + '...');
+
     // Call n8n webhook to generate report with accurate data
     console.log('🌐 Calling n8n webhook for report generation...');
     const webhookResponse = await fetch(n8nWebhookUrl, {
@@ -67,13 +71,13 @@ Deno.serve(async (req: Request) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        chatInput: prompt,
+        chatInput: latestPrompt,
         user_id: userId,
         user_email: userData.user.email,
         user_name: userData.user.user_metadata?.full_name || userData.user.email,
         conversation_id: null,
         mode: 'reports',
-        original_message: prompt,
+        original_message: latestPrompt,
         mentions: []
       })
     });

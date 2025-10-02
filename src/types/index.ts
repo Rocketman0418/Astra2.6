@@ -22,7 +22,6 @@ export interface ReportMessage {
     report_frequency?: string;
     is_manual_run?: boolean;
     executed_at?: string;
-    visualization_mode?: 'text' | 'insights_card' | 'detailed_report';
     visualization_generating?: boolean;
     visualization_error?: string;
   };
@@ -100,7 +99,6 @@ export interface UserReport {
   schedule_frequency: string;
   schedule_time: string;
   schedule_day: number | null;
-  visualization_mode: 'text' | 'insights_card' | 'detailed_report';
   is_active: boolean;
   last_run_at: string | null;
   next_run_at: string | null;

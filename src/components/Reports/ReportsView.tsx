@@ -62,24 +62,22 @@ export const ReportsView: React.FC = () => {
     }
   }, [reportMessages]);
 
-  // Auto-generate visualizations for insights_card and detailed_report modes
+  // Auto-generate visualizations for all reports
   useEffect(() => {
     reportMessages.forEach(message => {
       const messageId = message.chatId || message.id;
       const metadata = message.reportMetadata || {};
-      const vizMode = metadata.visualization_mode;
 
       // Check if this message needs auto-visualization
       const needsAutoVisualization =
-        (vizMode === 'insights_card' || vizMode === 'detailed_report') &&
         !message.visualization_data &&
         !metadata.visualization_generating &&
         !metadata.visualization_error &&
         !visualizationStates[messageId]?.isGenerating;
 
       if (needsAutoVisualization) {
-        console.log(`🚀 Auto-generating ${vizMode} for message:`, messageId);
-        handleCreateVisualization(messageId, message.text, vizMode);
+        console.log(`🚀 Auto-generating visualization for message:`, messageId);
+        handleCreateVisualization(messageId, message.text);
       }
     });
   }, [reportMessages, visualizationStates]);
@@ -94,8 +92,8 @@ export const ReportsView: React.FC = () => {
   }, [checkScheduledReports]);
 
   // Handle visualization creation
-  const handleCreateVisualization = async (messageId: string, messageContent: string, visualizationMode: 'text' | 'insights_card' | 'detailed_report' = 'detailed_report') => {
-    console.log(`🎯 Reports: Starting ${visualizationMode} generation for messageId:`, messageId);
+  const handleCreateVisualization = async (messageId: string, messageContent: string) => {
+    console.log(`🎯 Reports: Starting visualization generation for messageId:`, messageId);
 
     setVisualizationStates(prev => ({
       ...prev,
@@ -107,7 +105,7 @@ export const ReportsView: React.FC = () => {
     }));
 
     try {
-      await generateVisualization(messageId, messageContent, visualizationMode);
+      await generateVisualization(messageId, messageContent);
 
       setVisualizationStates(prev => ({
         ...prev,
@@ -118,9 +116,9 @@ export const ReportsView: React.FC = () => {
         }
       }));
 
-      console.log(`✅ Reports: ${visualizationMode} generation completed for message:`, messageId);
+      console.log(`✅ Reports: Visualization generation completed for message:`, messageId);
     } catch (error) {
-      console.error(`❌ Reports: Error during ${visualizationMode} generation:`, error);
+      console.error(`❌ Reports: Error during visualization generation:`, error);
       setVisualizationStates(prev => ({
         ...prev,
         [messageId]: {

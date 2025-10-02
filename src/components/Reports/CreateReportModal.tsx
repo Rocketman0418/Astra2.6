@@ -25,8 +25,7 @@ export const CreateReportModal: React.FC<CreateReportModalProps> = ({
     schedule_type: 'scheduled' as 'manual' | 'scheduled',
     schedule_frequency: 'daily',
     schedule_time: '07:00',
-    schedule_day: null as number | null,
-    visualization_mode: 'insights_card' as 'text' | 'insights_card' | 'detailed_report'
+    schedule_day: null as number | null
   });
 
   // Reset form and view state
@@ -41,8 +40,7 @@ export const CreateReportModal: React.FC<CreateReportModalProps> = ({
       schedule_type: 'scheduled',
       schedule_frequency: 'daily',
       schedule_time: '07:00',
-      schedule_day: null,
-      visualization_mode: 'insights_card'
+      schedule_day: null
     });
   };
 
@@ -62,8 +60,7 @@ export const CreateReportModal: React.FC<CreateReportModalProps> = ({
       schedule_type: 'scheduled',
       schedule_frequency: template.default_schedule,
       schedule_time: template.default_time,
-      schedule_day: scheduleDay,
-      visualization_mode: 'insights_card'
+      schedule_day: scheduleDay
     });
     setCurrentStep('configure');
   };
@@ -77,8 +74,7 @@ export const CreateReportModal: React.FC<CreateReportModalProps> = ({
       schedule_type: 'scheduled',
       schedule_frequency: 'daily',
       schedule_time: '07:00',
-      schedule_day: null,
-      visualization_mode: 'insights_card'
+      schedule_day: null
     });
     setCurrentStep('configure');
   };
@@ -100,8 +96,7 @@ export const CreateReportModal: React.FC<CreateReportModalProps> = ({
       schedule_time: formData.schedule_time,
       schedule_day: formData.schedule_day,
       report_template_id: selectedTemplate?.id || null,
-      is_active: true,
-      visualization_mode: formData.visualization_mode
+      is_active: true
     };
 
     await createReport(reportData);
@@ -234,66 +229,6 @@ export const CreateReportModal: React.FC<CreateReportModalProps> = ({
                     className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none resize-none"
                     required
                   />
-                </div>
-
-                {/* Visualization Mode */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Report Display Format
-                  </label>
-                  <div className="grid grid-cols-1 gap-3">
-                    <label className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                      formData.visualization_mode === 'insights_card'
-                        ? 'border-blue-500 bg-blue-500/10'
-                        : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'
-                    }`}>
-                      <input
-                        type="radio"
-                        value="insights_card"
-                        checked={formData.visualization_mode === 'insights_card'}
-                        onChange={(e) => setFormData({ ...formData, visualization_mode: e.target.value as any })}
-                        className="mt-1 mr-3"
-                      />
-                      <div>
-                        <span className="text-white font-medium block">📱 Insights Card (Recommended)</span>
-                        <span className="text-sm text-gray-400 block mt-1">Mobile-optimized 3-section highlights that fit on one screen</span>
-                      </div>
-                    </label>
-                    <label className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                      formData.visualization_mode === 'detailed_report'
-                        ? 'border-blue-500 bg-blue-500/10'
-                        : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'
-                    }`}>
-                      <input
-                        type="radio"
-                        value="detailed_report"
-                        checked={formData.visualization_mode === 'detailed_report'}
-                        onChange={(e) => setFormData({ ...formData, visualization_mode: e.target.value as any })}
-                        className="mt-1 mr-3"
-                      />
-                      <div>
-                        <span className="text-white font-medium block">📊 Detailed Report</span>
-                        <span className="text-sm text-gray-400 block mt-1">Full visualization with charts, graphs, and comprehensive analysis</span>
-                      </div>
-                    </label>
-                    <label className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                      formData.visualization_mode === 'text'
-                        ? 'border-blue-500 bg-blue-500/10'
-                        : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'
-                    }`}>
-                      <input
-                        type="radio"
-                        value="text"
-                        checked={formData.visualization_mode === 'text'}
-                        onChange={(e) => setFormData({ ...formData, visualization_mode: e.target.value as any })}
-                        className="mt-1 mr-3"
-                      />
-                      <div>
-                        <span className="text-white font-medium block">📝 Text Summary</span>
-                        <span className="text-sm text-gray-400 block mt-1">Simple text-based report summary</span>
-                      </div>
-                    </label>
-                  </div>
                 </div>
 
                 {/* Schedule Type */}

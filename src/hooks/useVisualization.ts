@@ -14,7 +14,7 @@ export const useVisualization = (
   const [savedScrollPosition, setSavedScrollPosition] = useState<number>(0);
   const [messageToHighlight, setMessageToHighlight] = useState<string | null>(null);
 
-  const generateVisualization = useCallback(async (messageId: string, messageText: string, visualizationMode: 'text' | 'insights_card' | 'detailed_report' = 'detailed_report') => {
+  const generateVisualization = useCallback(async (messageId: string, messageText: string, visualizationMode: 'detailed_report' = 'detailed_report') => {
     setIsGenerating(true);
 
     // Mark visualization as generating in persistent state
@@ -81,8 +81,7 @@ export const useVisualization = (
           }
         });
 
-        const getPromptForMode = (mode: string) => {
-          const baseDesign = `DESIGN REQUIREMENTS:
+        const baseDesign = `DESIGN REQUIREMENTS:
 - Use a dark theme with gray-900 (#111827) background
 - Use gray-800 (#1f2937) and gray-700 (#374151) for card backgrounds
 - Use white (#ffffff) and gray-300 (#d1d5db) for text
@@ -90,34 +89,7 @@ export const useVisualization = (
 - Match the visual style of a modern dark dashboard
 - Include proper spacing, rounded corners, and subtle shadows`;
 
-          if (mode === 'insights_card') {
-            return `Create a mobile-optimized 3-section insights card from the information below.
-
-${baseDesign}
-
-CRITICAL REQUIREMENTS FOR INSIGHTS CARD:
-- EXACTLY 3 sections, no more, no less
-- Each section must fit within a mobile phone screen (max 100vh total height)
-- Use large, eye-catching emojis or icons at the top of each section
-- Keep text CONCISE - maximum 2-3 short lines per insight
-- Use card-style layout with clear visual separation
-- Make it visually striking with gradients, borders, or background effects
-- Must be readable and beautiful on mobile without any scrolling
-- Focus on the TOP 3 most important insights only
-- Use visual hierarchy: Large headline → Brief insight → Key number/stat
-
-LAYOUT STRUCTURE:
-Create 3 cards arranged vertically that together fit on one mobile screen:
-[Card 1: Primary Insight with emoji + headline + 1-2 lines]
-[Card 2: Secondary Insight with emoji + headline + 1-2 lines]
-[Card 3: Key Takeaway with emoji + headline + 1-2 lines]
-
-MESSAGE TEXT:
-${messageText}
-
-Return only the HTML code - no other text or formatting.`;
-          } else {
-            return `Create a comprehensive visual dashboard to help understand the information in the message below.
+        const prompt = `Create a comprehensive visual dashboard to help understand the information in the message below.
 
 ${baseDesign}
 - Use graphics, emojis, and charts as needed to enhance the visualization
@@ -128,10 +100,6 @@ MESSAGE TEXT:
 ${messageText}
 
 Return only the HTML code - no other text or formatting.`;
-          }
-        };
-
-        const prompt = getPromptForMode(visualizationMode);
 
       console.log('🤖 Generating visualization with Gemini...');
       console.log('🔧 Using settings: temperature=1.0, topK=64, maxTokens=100000');

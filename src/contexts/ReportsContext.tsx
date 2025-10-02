@@ -246,8 +246,7 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
         body: JSON.stringify({
           userId: user.id,
           reportId: report.id,
-          prompt: report.prompt,
-          visualizationMode: report.visualization_mode
+          prompt: report.prompt
         })
       });
 

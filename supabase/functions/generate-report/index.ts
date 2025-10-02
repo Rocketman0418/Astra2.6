@@ -12,7 +12,6 @@ interface RequestBody {
   userId: string;
   reportId: string;
   prompt: string;
-  visualizationMode?: string;
 }
 
 Deno.serve(async (req: Request) => {
@@ -38,7 +37,7 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { userId, reportId, prompt, visualizationMode }: RequestBody = await req.json();
+    const { userId, reportId, prompt }: RequestBody = await req.json();
 
     console.log('📊 Generating report for user:', userId, 'reportId:', reportId);
 
@@ -64,7 +63,7 @@ Deno.serve(async (req: Request) => {
     // Generate AI response using Gemini
     const genAI = new GoogleGenerativeAI(geminiApiKey);
     const model = genAI.getGenerativeModel({ 
-      model: 'gemini-2.0-flash-exp',
+      model: 'gemini-2.5-flash',
       generationConfig: {
         temperature: 1.0,
         topK: 40,
@@ -93,8 +92,7 @@ Deno.serve(async (req: Request) => {
           report_schedule: report.schedule_time,
           report_frequency: report.schedule_frequency,
           is_manual_run: true,
-          executed_at: new Date().toISOString(),
-          visualization_mode: visualizationMode || report.visualization_mode || 'text'
+          executed_at: new Date().toISOString()
         }
       });
 

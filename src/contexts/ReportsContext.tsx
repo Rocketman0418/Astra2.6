@@ -274,7 +274,7 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const deleteReportMessage = async (id: string) => {
     try {
       const { error } = await supabase
-        .from('astra_report_messages')
+        .from('astra_chats')
         .delete()
         .eq('id', id);
 

@@ -593,9 +593,13 @@ export const useReports = () => {
       try {
         const now = new Date().toISOString();
         let nextRunAt = null;
-        
+
         if (report.schedule_type === 'scheduled') {
-          nextRunAt = calculateNextRunTime(report.schedule_time);
+          nextRunAt = calculateNextRunTime(
+            report.schedule_time,
+            report.schedule_frequency,
+            report.schedule_day || null
+          );
         }
         
         await supabase

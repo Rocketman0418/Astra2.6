@@ -302,11 +302,6 @@ export const ManageReportsModal: React.FC<ManageReportsModalProps> = ({
                                 Last run: {new Date(report.last_run_at).toLocaleDateString()}
                               </div>
                             )}
-                            {report.next_run_at && (
-                              <div>
-                                Next: {formatNextRun(report.next_run_at)}
-                              </div>
-                            )}
                           </div>
 
                           <p className="text-sm text-gray-400 line-clamp-2">

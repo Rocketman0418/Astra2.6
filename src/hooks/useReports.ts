@@ -156,17 +156,23 @@ export const useReports = () => {
       let nextRunAt = updates.next_run_at;
       const currentReport = userReports.find(r => r.id === id);
 
+      console.log('🔍 updateReport called with:', { id, updates, currentReport: currentReport?.schedule_time });
+
       // Recalculate next_run_at if this is a scheduled report and any schedule field changed
       if (currentReport) {
         const isScheduled = updates.schedule_type === 'scheduled' || currentReport.schedule_type === 'scheduled';
         const scheduleChanged = updates.schedule_frequency || updates.schedule_time || updates.schedule_day !== undefined;
 
+        console.log('🔍 Schedule check:', { isScheduled, scheduleChanged, updates });
+
         if (isScheduled && scheduleChanged) {
-          nextRunAt = calculateNextRunTime(
-            updates.schedule_time || currentReport.schedule_time,
-            updates.schedule_frequency || currentReport.schedule_frequency,
-            updates.schedule_day !== undefined ? updates.schedule_day : currentReport.schedule_day
-          );
+          const finalScheduleTime = updates.schedule_time || currentReport.schedule_time;
+          const finalFrequency = updates.schedule_frequency || currentReport.schedule_frequency;
+          const finalDay = updates.schedule_day !== undefined ? updates.schedule_day : currentReport.schedule_day;
+
+          console.log('🔍 Calculating with:', { finalScheduleTime, finalFrequency, finalDay });
+
+          nextRunAt = calculateNextRunTime(finalScheduleTime, finalFrequency, finalDay);
           console.log('📅 Recalculated next_run_at:', nextRunAt);
         }
       }

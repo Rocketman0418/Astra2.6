@@ -151,12 +151,8 @@ Return only the HTML code - no other text or formatting.`;
 
         const existingMetadata = existingMessage?.metadata || {};
 
-        // Remove visualization_generating and add visualization_error if it exists
-        const updatedMetadata = { ...existingMetadata };
-        delete updatedMetadata.visualization_generating;
-        if (updatedMetadata.visualization_error) {
-          delete updatedMetadata.visualization_error;
-        }
+        // Remove visualization_generating and visualization_error by creating a new object without them
+        const { visualization_generating, visualization_error, ...updatedMetadata } = existingMetadata;
 
         const { error: updateError } = await supabase
           .from('astra_chats')
@@ -235,10 +231,12 @@ Return only the HTML code - no other text or formatting.`;
 
         const existingMetadata = existingMessage?.metadata || {};
 
-        // Remove generating flag and add error
-        const updatedMetadata = { ...existingMetadata };
-        delete updatedMetadata.visualization_generating;
-        updatedMetadata.visualization_error = errorMessage;
+        // Remove generating flag and add error by creating a new object
+        const { visualization_generating, ...restMetadata } = existingMetadata;
+        const updatedMetadata = {
+          ...restMetadata,
+          visualization_error: errorMessage
+        };
 
         await supabase
           .from('astra_chats')

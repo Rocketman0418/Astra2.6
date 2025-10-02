@@ -1,6 +1,5 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { GoogleGenerativeAI } from 'npm:@google/generative-ai@0.24.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,14 +24,14 @@ Deno.serve(async (req: Request) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const geminiApiKey = Deno.env.get('VITE_GEMINI_API_KEY');
+    const n8nWebhookUrl = Deno.env.get('VITE_N8N_WEBHOOK_URL');
 
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error('Missing Supabase configuration');
     }
 
-    if (!geminiApiKey) {
-      throw new Error('VITE_GEMINI_API_KEY environment variable is not set. Please configure it in your Supabase project settings.');
+    if (!n8nWebhookUrl) {
+      throw new Error('VITE_N8N_WEBHOOK_URL environment variable is not set. Please configure it in your Supabase project settings.');
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -60,23 +59,45 @@ Deno.serve(async (req: Request) => {
       throw new Error('Report not found or access denied');
     }
 
-    // Generate AI response using Gemini
-    const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ 
-      model: 'gemini-2.5-flash',
-      generationConfig: {
-        temperature: 1.0,
-        topK: 40,
-        topP: 0.95,
-        maxOutputTokens: 8192,
-      }
+    // Call n8n webhook to generate report with accurate data
+    console.log('🌐 Calling n8n webhook for report generation...');
+    const webhookResponse = await fetch(n8nWebhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        chatInput: prompt,
+        user_id: userId,
+        user_email: userData.user.email,
+        user_name: userData.user.user_metadata?.full_name || userData.user.email,
+        conversation_id: null,
+        mode: 'reports',
+        original_message: prompt,
+        mentions: []
+      })
     });
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const reportText = response.text();
+    if (!webhookResponse.ok) {
+      const errorText = await webhookResponse.text();
+      console.error('❌ n8n webhook failed:', webhookResponse.status, errorText);
+      throw new Error('Failed to get report from n8n webhook');
+    }
 
-    console.log('✅ Report generated successfully');
+    const responseText = await webhookResponse.text();
+    let reportText = responseText;
+
+    // Try to parse JSON response
+    try {
+      const jsonResponse = JSON.parse(responseText);
+      if (jsonResponse.output) {
+        reportText = jsonResponse.output;
+      }
+    } catch (e) {
+      // Use raw text if not JSON
+    }
+
+    console.log('✅ Report generated successfully from n8n webhook');
 
     // Save report message to astra_chats
     const { error: insertError } = await supabase

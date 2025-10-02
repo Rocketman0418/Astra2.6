@@ -215,8 +215,21 @@ export const ReportCard: React.FC<ReportCardProps> = ({
 
         {/* Show Text Summary View */}
         {showTextSummary && !isGenerating && (
-          <div className="prose prose-invert max-w-none">
-            {formatMessageText(message.text)}
+          <div className="space-y-4">
+            <div className="prose prose-invert max-w-none">
+              {formatMessageText(message.text)}
+            </div>
+
+            {/* Show Less Button */}
+            <div className="flex justify-center pt-4">
+              <button
+                onClick={() => setShowTextSummary(false)}
+                className="flex items-center space-x-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm font-medium"
+              >
+                <ChevronUp className="w-4 h-4" />
+                <span>Show Less</span>
+              </button>
+            </div>
           </div>
         )}
 

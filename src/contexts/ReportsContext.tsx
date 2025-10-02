@@ -336,11 +336,19 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
           },
           (payload) => {
             console.log('📡 [ReportsContext] Report messages realtime event:', payload.eventType, payload);
+            console.log('📡 [ReportsContext] Payload new:', payload.new);
+            console.log('📡 [ReportsContext] Payload old:', payload.old);
 
-            // Only refresh if it's a reports mode message
-            if (payload.new && (payload.new as any).mode === 'reports') {
-              console.log('📡 [ReportsContext] Reports message updated, refreshing...');
-              fetchReportMessages();
+            // Refresh on any report message change (INSERT or UPDATE)
+            if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+              const record = payload.new || payload.old;
+              if (record && (record as any).mode === 'reports') {
+                console.log('📡 [ReportsContext] Reports message changed, refreshing...');
+                fetchReportMessages();
+              }
+            } else if (payload.eventType === 'DELETE' && payload.old && (payload.old as any).mode === 'reports') {
+              console.log('📡 [ReportsContext] Reports message deleted, refreshing...');
+              setReportMessages(prev => prev.filter(m => m.id !== payload.old.id));
             }
           }
         )

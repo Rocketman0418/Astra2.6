@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MessageSquare, Trash2, Plus, Search, X, LogOut, User } from 'lucide-react';
 import { useChats, Conversation } from '../hooks/useChats';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 
 interface ChatSidebarProps {
   isOpen: boolean;
@@ -30,12 +31,42 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   // Refresh conversations when activeConversationId changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (activeConversationId) {
       console.log('🔄 ChatSidebar: activeConversationId changed, refreshing conversations');
       fetchConversations();
     }
   }, [activeConversationId, fetchConversations]);
+
+  // Set up dedicated realtime subscription for sidebar
+  useEffect(() => {
+    if (!user) return;
+
+    console.log('📡 ChatSidebar: Setting up realtime subscription for astra_chats');
+
+    const channel = supabase
+      .channel('sidebar_astra_chats')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'astra_chats',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('📡 ChatSidebar: New message detected, refreshing conversations');
+          // Small delay to ensure DB transaction is fully committed
+          setTimeout(() => fetchConversations(), 200);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('📡 ChatSidebar: Cleaning up realtime subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [user, fetchConversations]);
 
   console.log('🚀 ChatSidebar render:', {
     isOpen,

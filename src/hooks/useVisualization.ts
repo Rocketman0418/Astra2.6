@@ -71,8 +71,8 @@ export const useVisualization = (
         }
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ 
-          model: 'gemini-2.5-flash',
+        const model = genAI.getGenerativeModel({
+          model: 'gemini-flash-latest',
           generationConfig: {
             temperature: 1.0,
             topK: 64,

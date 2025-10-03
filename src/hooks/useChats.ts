@@ -12,6 +12,7 @@ export interface Conversation {
   lastMessage: string;
   createdAt: string;
   messageCount: number;
+  lastActivity?: string; // Track most recent message time for sorting
 }
 
 export interface ChatMessage {
@@ -116,7 +117,7 @@ export const useChats = () => {
       const conversationList: Conversation[] = Array.from(conversationMap.entries()).map(
         ([id, { messages, firstMessage, lastMessage }]) => ({
           id,
-          title: firstMessage.message.length > 50 
+          title: firstMessage.message.length > 50
             ? firstMessage.message.substring(0, 50) + '...'
             : firstMessage.message,
           lastMessage: lastMessage.message.length > 100
@@ -124,11 +125,16 @@ export const useChats = () => {
             : lastMessage.message,
           createdAt: firstMessage.created_at,
           messageCount: messages.length,
+          lastActivity: lastMessage.created_at, // Track most recent activity
         })
       );
 
-      // Sort by creation date (newest first)
-      conversationList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      // Sort by most recent activity (lastMessage time), not creation date
+      conversationList.sort((a, b) => {
+        const aTime = new Date(a.lastActivity || a.createdAt).getTime();
+        const bTime = new Date(b.lastActivity || b.createdAt).getTime();
+        return bTime - aTime; // Most recent first
+      });
 
       setConversations(conversationList);
     } catch (err) {

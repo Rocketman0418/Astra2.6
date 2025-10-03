@@ -137,57 +137,55 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, onLoa
               </div>
             ) : (
               <div className="p-2">
-                {filteredConversations.map((conversation) => (
-                  <div
-                    key={conversation.id}
-                    onClick={() => handleLoadConversation(conversation.id)}
-                    className={`group relative p-3 rounded-lg cursor-pointer transition-all duration-200 mb-2 ${
-                      conversation.id === currentConversationId
-                        ? 'bg-gradient-to-r from-blue-600/30 to-purple-600/30 border-2 border-blue-500 shadow-lg shadow-blue-500/20'
-                        : 'hover:bg-gray-700/50 border-2 border-transparent'
-                    }`}
-                  >
-                    {/* Active indicator */}
-                    {conversation.id === currentConversationId && (
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-blue-500 to-purple-500 rounded-r-full" />
-                    )}
+                {filteredConversations.map((conversation) => {
+                  const isActive = conversation.id === currentConversationId;
 
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <h3 className={`text-sm font-medium truncate mb-1 ${
-                          conversation.id === currentConversationId
-                            ? 'text-blue-300 font-semibold'
-                            : 'text-white'
-                        }`}>
-                          {conversation.title}
-                        </h3>
-                        <p className={`text-xs line-clamp-2 mb-2 ${
-                          conversation.id === currentConversationId
-                            ? 'text-gray-300'
-                            : 'text-gray-400'
-                        }`}>
-                          {conversation.lastMessage}
-                        </p>
-                        <div className={`flex items-center justify-between text-xs ${
-                          conversation.id === currentConversationId
-                            ? 'text-gray-400'
-                            : 'text-gray-500'
-                        }`}>
-                          <span>{formatDate(conversation.createdAt)}</span>
-                          <span>{conversation.messageCount} messages</span>
+                  return (
+                    <div
+                      key={conversation.id}
+                      onClick={() => handleLoadConversation(conversation.id)}
+                      className={`group relative p-3 rounded-lg cursor-pointer transition-all duration-200 mb-2 ${
+                        isActive
+                          ? 'bg-blue-600 hover:bg-blue-500 border-2 border-blue-400'
+                          : 'bg-gray-800 hover:bg-gray-700 border-2 border-transparent'
+                      }`}
+                    >
+                      {/* Active indicator - bold left border */}
+                      {isActive && (
+                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-white rounded-l-lg" />
+                      )}
+
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <h3 className={`text-sm font-medium truncate mb-1 ${
+                            isActive ? 'text-white font-bold' : 'text-white'
+                          }`}>
+                            {conversation.title}
+                          </h3>
+                          <p className={`text-xs line-clamp-2 mb-2 ${
+                            isActive ? 'text-blue-100' : 'text-gray-400'
+                          }`}>
+                            {conversation.lastMessage}
+                          </p>
+                          <div className={`flex items-center justify-between text-xs ${
+                            isActive ? 'text-blue-200' : 'text-gray-500'
+                          }`}>
+                            <span>{formatDate(conversation.createdAt)}</span>
+                            <span>{conversation.messageCount} messages</span>
+                          </div>
                         </div>
-                      </div>
 
-                      <button
-                        onClick={(e) => handleDeleteConversation(e, conversation.id)}
-                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 rounded transition-all duration-200 ml-2"
-                        title="Delete conversation"
-                      >
-                        <Trash2 className="w-4 h-4 text-red-400" />
-                      </button>
+                        <button
+                          onClick={(e) => handleDeleteConversation(e, conversation.id)}
+                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 rounded transition-all duration-200 ml-2"
+                          title="Delete conversation"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-400" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

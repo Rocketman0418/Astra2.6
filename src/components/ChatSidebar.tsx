@@ -22,11 +22,20 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const {
     conversations,
     deleteConversation,
-    loading
+    loading,
+    fetchConversations
   } = useChats();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
+
+  // Refresh conversations when activeConversationId changes
+  React.useEffect(() => {
+    if (activeConversationId) {
+      console.log('🔄 ChatSidebar: activeConversationId changed, refreshing conversations');
+      fetchConversations();
+    }
+  }, [activeConversationId, fetchConversations]);
 
   console.log('🚀 ChatSidebar render:', {
     isOpen,

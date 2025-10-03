@@ -139,37 +139,38 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, onLoa
               <div className="p-2">
                 {filteredConversations.map((conversation) => {
                   const isActive = conversation.id === currentConversationId;
+                  console.log('Chat item:', conversation.id, 'isActive:', isActive, 'currentConversationId:', currentConversationId);
 
                   return (
                     <div
                       key={conversation.id}
                       onClick={() => handleLoadConversation(conversation.id)}
-                      className={`group relative p-3 rounded-lg cursor-pointer transition-all duration-200 mb-2 ${
-                        isActive
-                          ? 'bg-blue-600 hover:bg-blue-500 border-2 border-blue-400'
-                          : 'bg-gray-800 hover:bg-gray-700 border-2 border-transparent'
-                      }`}
+                      style={{
+                        backgroundColor: isActive ? '#2563eb' : '#1f2937',
+                        borderLeft: isActive ? '4px solid #fbbf24' : '4px solid transparent',
+                        borderRight: isActive ? '2px solid #3b82f6' : '2px solid transparent',
+                        borderTop: isActive ? '2px solid #3b82f6' : '2px solid transparent',
+                        borderBottom: isActive ? '2px solid #3b82f6' : '2px solid transparent',
+                      }}
+                      className="group relative p-3 rounded-lg cursor-pointer transition-all duration-200 mb-2"
                     >
-                      {/* Active indicator - bold left border */}
-                      {isActive && (
-                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-white rounded-l-lg" />
-                      )}
-
                       <div className="flex items-start justify-between">
                         <div className="flex-1 min-w-0">
-                          <h3 className={`text-sm font-medium truncate mb-1 ${
-                            isActive ? 'text-white font-bold' : 'text-white'
-                          }`}>
+                          <h3 style={{
+                            color: isActive ? '#fef3c7' : '#ffffff',
+                            fontWeight: isActive ? '700' : '500'
+                          }} className="text-sm truncate mb-1">
+                            {isActive && '▶ '}
                             {conversation.title}
                           </h3>
-                          <p className={`text-xs line-clamp-2 mb-2 ${
-                            isActive ? 'text-blue-100' : 'text-gray-400'
-                          }`}>
+                          <p style={{
+                            color: isActive ? '#dbeafe' : '#9ca3af'
+                          }} className="text-xs line-clamp-2 mb-2">
                             {conversation.lastMessage}
                           </p>
-                          <div className={`flex items-center justify-between text-xs ${
-                            isActive ? 'text-blue-200' : 'text-gray-500'
-                          }`}>
+                          <div style={{
+                            color: isActive ? '#bfdbfe' : '#6b7280'
+                          }} className="flex items-center justify-between text-xs">
                             <span>{formatDate(conversation.createdAt)}</span>
                             <span>{conversation.messageCount} messages</span>
                           </div>

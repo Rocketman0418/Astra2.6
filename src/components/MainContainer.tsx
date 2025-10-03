@@ -22,7 +22,8 @@ export const MainContainer: React.FC = () => {
   }, [chatMode]);
 
   const handleLoadConversation = (conversationId: string) => {
-    
+    console.log('MainContainer: handleLoadConversation called with:', conversationId);
+
     // Check if this is a summary request (special conversation ID format)
     if (conversationId.startsWith('summary-')) {
       // Start a new conversation and set a flag to send the summary prompt

@@ -18,9 +18,16 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, onLoa
     deleteConversation,
     loading
   } = useChats();
-  
+
   const [searchTerm, setSearchTerm] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
+
+  console.log('ChatSidebar render:', {
+    isOpen,
+    currentConversationId,
+    conversationsCount: conversations.length,
+    conversationIds: conversations.map(c => c.id)
+  });
 
   const filteredConversations = conversations.filter(conv =>
     conv.title.toLowerCase().includes(searchTerm.toLowerCase()) ||

@@ -445,6 +445,37 @@ export const useChats = () => {
     }
   }, [user, fetchConversations]);
 
+  // Set up real-time subscription for chat updates
+  useEffect(() => {
+    if (!user) return;
+
+    console.log('📡 Setting up real-time subscription for astra_chats');
+
+    const channel = supabase
+      .channel('astra_chats_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'astra_chats',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('📡 Real-time update received:', payload.eventType, payload);
+
+          // Refresh conversations list when any change occurs
+          fetchConversations();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('📡 Cleaning up real-time subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [user, fetchConversations]);
+
   return {
     conversations,
     currentConversationId,

@@ -146,7 +146,13 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, onLoa
               <div className="p-2">
                 {filteredConversations.map((conversation) => {
                   const isActive = conversation.id === currentConversationId;
-                  console.log('Chat item:', conversation.id, 'isActive:', isActive, 'currentConversationId:', currentConversationId);
+                  console.log('🎯 Chat item render:', {
+                    conversationId: conversation.id,
+                    currentConversationId: currentConversationId,
+                    isActive: isActive,
+                    idsMatch: conversation.id === currentConversationId,
+                    title: conversation.title.substring(0, 30)
+                  });
 
                   return (
                     <div

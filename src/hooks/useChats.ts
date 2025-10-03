@@ -173,6 +173,13 @@ export const useChats = () => {
 
     try {
       const chatConversationId = conversationId || currentConversationId || createNewConversation();
+
+      // CRITICAL: Always set currentConversationId to ensure it's tracked
+      if (chatConversationId !== currentConversationId) {
+        console.log('💾 logChatMessage: Setting currentConversationId to:', chatConversationId);
+        setCurrentConversationId(chatConversationId);
+      }
+
       console.log('💾 logChatMessage: Using conversation ID:', chatConversationId, {
         providedId: conversationId,
         currentId: currentConversationId,
@@ -219,20 +226,52 @@ export const useChats = () => {
         return null;
       }
 
-      // Update current messages if this is for the active conversation
-      if (chatConversationId === currentConversationId) {
-        const newMessage: ChatMessage = {
-          id: data.id,
-          message: data.message,
-          isUser: data.message_type === 'user',
-          createdAt: data.created_at,
-        };
-        setCurrentMessages(prev => [...prev, newMessage]);
-      }
+      // Update current messages
+      const newMessage: ChatMessage = {
+        id: data.id,
+        message: data.message,
+        isUser: data.message_type === 'user',
+        createdAt: data.created_at,
+      };
+      setCurrentMessages(prev => [...prev, newMessage]);
 
-      // Refresh conversations list
-      console.log('💾 logChatMessage: Message saved, refreshing conversations list');
-      await fetchConversations();
+      // OPTIMISTIC UPDATE: Immediately add/update conversation in the list
+      setConversations(prev => {
+        const existingIndex = prev.findIndex(c => c.id === chatConversationId);
+
+        if (existingIndex >= 0) {
+          // Update existing conversation
+          const updated = [...prev];
+          updated[existingIndex] = {
+            ...updated[existingIndex],
+            lastMessage: message.length > 100 ? message.substring(0, 100) + '...' : message,
+            lastActivity: data.created_at,
+            messageCount: updated[existingIndex].messageCount + 1
+          };
+          // Move to top (most recent)
+          updated.sort((a, b) => {
+            const aTime = new Date(a.lastActivity || a.createdAt).getTime();
+            const bTime = new Date(b.lastActivity || b.createdAt).getTime();
+            return bTime - aTime;
+          });
+          return updated;
+        } else {
+          // Add new conversation at the top
+          const newConv: Conversation = {
+            id: chatConversationId,
+            title: message.length > 50 ? message.substring(0, 50) + '...' : message,
+            lastMessage: message.length > 100 ? message.substring(0, 100) + '...' : message,
+            createdAt: data.created_at,
+            messageCount: 1,
+            lastActivity: data.created_at
+          };
+          return [newConv, ...prev];
+        }
+      });
+
+      // Refresh conversations list in background to sync with database
+      console.log('💾 logChatMessage: Message saved, refreshing conversations list in background');
+      fetchConversations();
 
       return data.id; // Return the actual chat message ID for visualization tracking
     } catch (err) {

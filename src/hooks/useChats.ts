@@ -136,6 +136,7 @@ export const useChats = () => {
         return bTime - aTime; // Most recent first
       });
 
+      console.log('📋 fetchConversations: Found', conversationList.length, 'conversations');
       setConversations(conversationList);
     } catch (err) {
       console.error('Error in fetchConversations:', err);
@@ -172,6 +173,12 @@ export const useChats = () => {
 
     try {
       const chatConversationId = conversationId || currentConversationId || createNewConversation();
+      console.log('💾 logChatMessage: Using conversation ID:', chatConversationId, {
+        providedId: conversationId,
+        currentId: currentConversationId,
+        isUser,
+        messagePreview: message.substring(0, 50)
+      });
       
       // Get user name from the users table, with fallbacks
       const userName = userProfile?.name || 
@@ -224,6 +231,7 @@ export const useChats = () => {
       }
 
       // Refresh conversations list
+      console.log('💾 logChatMessage: Message saved, refreshing conversations list');
       await fetchConversations();
 
       return data.id; // Return the actual chat message ID for visualization tracking
@@ -232,7 +240,7 @@ export const useChats = () => {
       setError('Failed to save chat message');
       return null;
     }
-  }, [user, userProfile, fetchConversations]);
+  }, [user, userProfile, currentConversationId, createNewConversation, fetchConversations]);
 
   // Load a specific conversation
   const loadConversation = useCallback(async (conversationId: string) => {
@@ -274,14 +282,14 @@ export const useChats = () => {
       }));
 
       setCurrentMessages(messages);
-      
+
       setLoading(false);
     } catch (err) {
       console.error('Error in loadConversation:', err);
       setError('Failed to load conversation');
       setLoading(false);
     }
-  }, [user, currentConversationId, currentMessages.length]);
+  }, [user]);
 
   // Delete a conversation
   const deleteConversation = useCallback(async (conversationId: string) => {
@@ -316,6 +324,7 @@ export const useChats = () => {
   // Create a new conversation and clear current messages
   const startNewConversation = useCallback(() => {
     const newConversationId = uuidv4();
+    console.log('🆕 startNewConversation: Creating new conversation with ID:', newConversationId);
     setCurrentConversationId(newConversationId);
     setCurrentMessages([]);
     return newConversationId;

@@ -29,11 +29,6 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isCreatingVisualization, setIsCreatingVisualization] = useState(false);
 
-  // Notify parent component when conversation changes
-  useEffect(() => {
-    console.log('📍 ChatContainer: currentConversationId changed to:', currentConversationId);
-    onConversationChange(currentConversationId);
-  }, [currentConversationId, onConversationChange]);
   const {
     messages,
     isLoading,
@@ -52,6 +47,12 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
     startReply,
     cancelReply
   } = useChat();
+
+  // Notify parent component when conversation changes
+  useEffect(() => {
+    console.log('📍 ChatContainer: currentConversationId changed to:', currentConversationId);
+    onConversationChange(currentConversationId);
+  }, [currentConversationId, onConversationChange]);
   
   const {
     favorites,

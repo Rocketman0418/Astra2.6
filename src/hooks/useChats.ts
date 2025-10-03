@@ -235,43 +235,10 @@ export const useChats = () => {
       };
       setCurrentMessages(prev => [...prev, newMessage]);
 
-      // OPTIMISTIC UPDATE: Immediately add/update conversation in the list
-      setConversations(prev => {
-        const existingIndex = prev.findIndex(c => c.id === chatConversationId);
-
-        if (existingIndex >= 0) {
-          // Update existing conversation
-          const updated = [...prev];
-          updated[existingIndex] = {
-            ...updated[existingIndex],
-            lastMessage: message.length > 100 ? message.substring(0, 100) + '...' : message,
-            lastActivity: data.created_at,
-            messageCount: updated[existingIndex].messageCount + 1
-          };
-          // Move to top (most recent)
-          updated.sort((a, b) => {
-            const aTime = new Date(a.lastActivity || a.createdAt).getTime();
-            const bTime = new Date(b.lastActivity || b.createdAt).getTime();
-            return bTime - aTime;
-          });
-          return updated;
-        } else {
-          // Add new conversation at the top
-          const newConv: Conversation = {
-            id: chatConversationId,
-            title: message.length > 50 ? message.substring(0, 50) + '...' : message,
-            lastMessage: message.length > 100 ? message.substring(0, 100) + '...' : message,
-            createdAt: data.created_at,
-            messageCount: 1,
-            lastActivity: data.created_at
-          };
-          return [newConv, ...prev];
-        }
-      });
-
-      // Refresh conversations list in background to sync with database
-      console.log('💾 logChatMessage: Message saved, refreshing conversations list in background');
-      fetchConversations();
+      // Trigger immediate refresh for conversations list
+      // The real-time subscription will update all instances
+      console.log('💾 logChatMessage: Message saved, triggering conversations refresh');
+      setTimeout(() => fetchConversations(), 100); // Small delay to ensure DB write is complete
 
       return data.id; // Return the actual chat message ID for visualization tracking
     } catch (err) {

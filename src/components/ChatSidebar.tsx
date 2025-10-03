@@ -166,25 +166,24 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                       onClick={() => handleLoadConversation(conversation.id)}
                       className={`group relative p-3 rounded-lg cursor-pointer transition-all duration-200 mb-2 ${
                         isActive
-                          ? 'bg-blue-600 border-2 border-amber-400 shadow-lg'
-                          : 'bg-gray-800 border-2 border-transparent hover:bg-gray-700'
+                          ? 'bg-gray-700 border-l-4 border-blue-500'
+                          : 'bg-gray-800 border-l-4 border-transparent hover:bg-gray-700'
                       }`}
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1 min-w-0">
                           <h3 className={`text-sm truncate mb-1 ${
-                            isActive ? 'text-amber-100 font-bold' : 'text-white font-medium'
+                            isActive ? 'text-blue-300 font-semibold' : 'text-white font-medium'
                           }`}>
-                            {isActive && '▶ '}
                             {conversation.title}
                           </h3>
                           <p className={`text-xs line-clamp-2 mb-2 ${
-                            isActive ? 'text-blue-100' : 'text-gray-400'
+                            isActive ? 'text-gray-300' : 'text-gray-400'
                           }`}>
                             {conversation.lastMessage}
                           </p>
                           <div className={`flex items-center justify-between text-xs ${
-                            isActive ? 'text-blue-200' : 'text-gray-500'
+                            isActive ? 'text-gray-400' : 'text-gray-500'
                           }`}>
                             <span>{formatDate(conversation.createdAt)}</span>
                             <span>{conversation.messageCount} messages</span>

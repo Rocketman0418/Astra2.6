@@ -13,6 +13,7 @@ export const MainContainer: React.FC = () => {
   const [conversationToLoad, setConversationToLoad] = useState<string | null>(null);
   const [shouldStartNewChat, setShouldStartNewChat] = useState(false);
   const [showTeamMenu, setShowTeamMenu] = useState(false);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
 
   // Close sidebar when switching away from private chat mode
   React.useEffect(() => {
@@ -65,11 +66,12 @@ export const MainContainer: React.FC = () => {
     <div className="flex flex-col h-screen bg-gray-900">
       {/* Sidebar - only show for private chat mode */}
       {chatMode === 'private' && (
-        <ChatSidebar 
-          isOpen={sidebarOpen} 
+        <ChatSidebar
+          isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
           onLoadConversation={handleLoadConversation}
           onStartNewConversation={handleStartNewConversation}
+          activeConversationId={activeConversationId}
         />
       )}
       
@@ -91,13 +93,14 @@ export const MainContainer: React.FC = () => {
           {chatMode === 'reports' ? (
             <ReportsView />
           ) : chatMode === 'private' ? (
-            <ChatContainer 
+            <ChatContainer
               sidebarOpen={sidebarOpen}
               onCloseSidebar={() => setSidebarOpen(false)}
               conversationToLoad={conversationToLoad}
               shouldStartNewChat={shouldStartNewChat}
               onConversationLoaded={() => setConversationToLoad(null)}
               onNewChatStarted={() => setShouldStartNewChat(false)}
+              onConversationChange={setActiveConversationId}
             />
           ) : (
             <GroupChat 

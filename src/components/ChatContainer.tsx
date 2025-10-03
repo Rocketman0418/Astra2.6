@@ -14,18 +14,26 @@ interface ChatContainerProps {
   shouldStartNewChat: boolean;
   onConversationLoaded: () => void;
   onNewChatStarted: () => void;
+  onConversationChange: (conversationId: string | null) => void;
 }
 
-export const ChatContainer: React.FC<ChatContainerProps> = ({ 
-  sidebarOpen, 
+export const ChatContainer: React.FC<ChatContainerProps> = ({
+  sidebarOpen,
   onCloseSidebar,
   conversationToLoad,
   shouldStartNewChat,
   onConversationLoaded,
-  onNewChatStarted
+  onNewChatStarted,
+  onConversationChange
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isCreatingVisualization, setIsCreatingVisualization] = useState(false);
+
+  // Notify parent component when conversation changes
+  useEffect(() => {
+    console.log('📍 ChatContainer: currentConversationId changed to:', currentConversationId);
+    onConversationChange(currentConversationId);
+  }, [currentConversationId, onConversationChange]);
   const {
     messages,
     isLoading,

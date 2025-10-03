@@ -8,13 +8,19 @@ interface ChatSidebarProps {
   onClose: () => void;
   onLoadConversation: (conversationId: string) => void;
   onStartNewConversation: () => void;
+  activeConversationId: string | null;
 }
 
-export const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, onLoadConversation, onStartNewConversation }) => {
+export const ChatSidebar: React.FC<ChatSidebarProps> = ({
+  isOpen,
+  onClose,
+  onLoadConversation,
+  onStartNewConversation,
+  activeConversationId
+}) => {
   const { user, signOut } = useAuth();
   const {
     conversations,
-    currentConversationId,
     deleteConversation,
     loading
   } = useChats();
@@ -22,9 +28,9 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, onLoa
   const [searchTerm, setSearchTerm] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
 
-  console.log('ChatSidebar render:', {
+  console.log('🚀 ChatSidebar render:', {
     isOpen,
-    currentConversationId,
+    activeConversationId,
     conversationsCount: conversations.length,
     conversationIds: conversations.map(c => c.id)
   });
@@ -145,12 +151,12 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, onLoa
             ) : (
               <div className="p-2">
                 {filteredConversations.map((conversation) => {
-                  const isActive = conversation.id === currentConversationId;
+                  const isActive = conversation.id === activeConversationId;
                   console.log('🎯 Chat item render:', {
                     conversationId: conversation.id,
-                    currentConversationId: currentConversationId,
+                    activeConversationId: activeConversationId,
                     isActive: isActive,
-                    idsMatch: conversation.id === currentConversationId,
+                    idsMatch: conversation.id === activeConversationId,
                     title: conversation.title.substring(0, 30)
                   });
 
